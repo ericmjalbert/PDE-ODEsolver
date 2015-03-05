@@ -1,6 +1,6 @@
-!==============================================================================
+!==================================================================
 !   PDE - ODE Coupled Solver
-!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------
 !     This fortran code solves the PDE - ODE coupled system that describes 
 !   the growth of Clostridium Thermocellum and its consumption of the carbon
 !   substrait.
@@ -12,47 +12,47 @@
 !   Carbon. D(M) is the diffusion coeffient for the biomass movement. f(C,M) 
 !   is the growth and death term for the biomass. g(C,M) is the consumption
 !   of carbon substrait.
-!-----------------------------------------------------------------------------
+!--------------------------------------------------------------------
 !     The method of solving is by trapzidral rule for C, and by finite
 !   difference for M 
-!==============================================================================
+!===================================================================
 
 program cThermoPDEODE
 !    use omp_lib
     implicit none
     INTERFACE
-        subroutine solveLSDIAG(n,ndiag,ioff,a,sol,rhs,nit,err1,err2,stopcrit)
-        !---------------------------------------------------------------------
-        ! input:  n       problem size
-        !         ndiag:  number of diagonals
-        !         ioff:   offsets (distance of sub diagonals to main diagonal)
-        !         Mnew:      matrix values
-        !         sol:    initial guess for iteration ( overwritten by result)
-        !         rhs:    the righ hand side of the linear system
-        !         nit:    max num of iter to be carried out (overwritten)
-        !         err1:   tol for 1st stopping criterion (will be overwritten)
-        !         err2:   tol for 2nd stopping criterion (will be overwritten)
-        ! output: sol:    solution of Ax=b
-        !         nit:    number of iterations taken
-        !         err1:   computed value for 1st stopping criterion
-        !         err2:   computed value for 2nd stopping criterion
-        !         stopcrit: value that tells which stopping criti activated
-        !---------------------------------------------------------------------
-        implicit none
-        integer, intent(in)               :: n,ndiag
-        real,dimension(n,ndiag),intent(in):: a
-        integer, dimension(ndiag),intent(in)::ioff
-        real,dimension(n),intent(in)      :: rhs
-        real,dimension(n),intent(inout)   :: sol
-        real,intent(inout)                :: err1,err2
-        integer,intent(inout)             :: nit
-        integer,intent(out)               :: stopcrit
-        end subroutine
+      subroutine solveLSDIAG(n,ndiag,ioff,a,sol,rhs,nit,err1,err2,stopcrit)
+      !----------------------------------------------------------------
+      ! input:  n       problem size
+      !         ndiag:  number of diagonals
+      !         ioff:   offsets (distance of sub diagonals to main diagonal)
+      !         Mnew:      matrix values
+      !         sol:    initial guess for iteration ( overwritten by result)
+      !         rhs:    the righ hand side of the linear system
+      !         nit:    max num of iter to be carried out (overwritten)
+      !         err1:   tol for 1st stopping criterion (will be overwritten)
+      !         err2:   tol for 2nd stopping criterion (will be overwritten)
+      ! output: sol:    solution of Ax=b
+      !         nit:    number of iterations taken
+      !         err1:   computed value for 1st stopping criterion
+      !         err2:   computed value for 2nd stopping criterion
+      !         stopcrit: value that tells which stopping criti activated
+      !----------------------------------------------------------------
+      implicit none
+      integer, intent(in)               :: n,ndiag
+      real,dimension(0:n,ndiag),intent(in):: a
+      integer, dimension(ndiag),intent(in)::ioff
+      real,dimension(0:n),intent(in)      :: rhs
+      real,dimension(0:n),intent(inout)   :: sol
+      real,intent(inout)                :: err1,err2
+      integer,intent(inout)             :: nit
+      integer,intent(out)               :: stopcrit
+      end subroutine
     END INTERFACE
   
-    !=======================
+    !=================
     ! Variable Descriptions
-    !=======================
+    !=================
     
     ! filename Variables
     character(100) :: filename
@@ -88,15 +88,16 @@ program cThermoPDEODE
     write(*,*) "    pSize = ", pSize
     row = pSize
     col = 4
-    n = pSize * col
-    write(*,*) "    row   = ", row
+    n = (row+1) * (col+1) - 1  ! "row/col + 1" since count starts from 0. 
+                               ! "- 1" at end since n count starts at 0, not
+    write(*,*) "    row   = ", row 
     write(*,*) "    col   = ", col        
     write(*,*) "    n     = ", n
 
     write(*,*) "Opening Parameter file"
-    call paramSet(length, lambda, depth, height, m0, c0, alpha, beta, gam, k, &
-                  mu, y, nu, delta, nOuts, tEnd, xLen, yLen, tDel, e1, e2, & 
-                  esoln, fSelect, dSelect, gSelect, MinitialCond, filename, &
+    call paramSet(length,lambda,depth,height,m0,c0,alpha,beta,gam,k, &
+                  mu,y,nu,delta,nOuts,tEnd,xLen,yLen,tDel,e1,e2, & 
+                  esoln,fSelect,dSelect,gSelect,MinitialCond,filename, &
                   len(filename))
     yDel = yLen/real(row)
     xDel = yDel
@@ -131,8 +132,8 @@ program cThermoPDEODE
     write(*,*) "    MinitialCond= ", MinitialCond
     
     write(*,*) "Allocating the size of arrays"
-    allocate(C(n),M(n))
-    write(*,'(A,I6,A)') "    C and M are now dimension(", n, ") arrays"
+    allocate(C(0:n),M(0:n))
+    write(*,'(A,I6,A)') "    C and M are now dimension(0:", n, ") arrays"
 
     write(*,*) "Setting Initial Conditions"
     call setInitialConditions(C,M,row,col,n,depth,height,yDel,MinitialCond)
@@ -173,12 +174,12 @@ program cThermoPDEODE
 end program
 
 
-!==============================================================================
+!========================================================================
 !   Sets the problem size and number of diagonal elements
-!-----------------------------------------------------------------------------
+!------------------------------------------------------------------------
 !     This must be done first since the problem size is used in the variable 
 !   declaration of the arrays.
-!==============================================================================
+!========================================================================
 subroutine getProbSize(pSize, filename, nameLen) 
     implicit none
     integer,intent(out) :: pSize
@@ -193,17 +194,17 @@ subroutine getProbSize(pSize, filename, nameLen)
 end subroutine getprobSize
 
 
-!==============================================================================
+!========================================================================
 !   Sets the all the parameter values
-!-----------------------------------------------------------------------------
+!------------------------------------------------------------------------
 !     Opens the parameter.txt file, which holds all the parameter values and 
 !   function uses, and sets the variables accordingly.
-!     Takes in all the parameters on entry and outputs them with the appropriate
-!   value.
-!==============================================================================
-subroutine paramSet(length, lambda, depth, height, m0, c0, alpha, beta, gam, &
-                    k, mu,y, nu, delta, nOuts, tEnd, xLen, yLen, tDel, e1, e2,&
-                    esoln, fSelect, dSelect, gSelect, MinitialCond, filename, &
+!     Takes in all the parameters on entry and outputs them with the
+!   appropriate value.
+!========================================================================
+subroutine paramSet(length,lambda,depth,height,m0,c0,alpha,beta,gam, &
+                    k,mu,y,nu,delta,nOuts,tEnd,xLen,yLen,tDel,e1,e2,&
+                    esoln,fSelect,dSelect,gSelect,MinitialCond,filename, &
                     nameLen)
     implicit none
     real, intent(out) :: lambda, depth, height, m0, c0, gam, k, delta, nu, mu
@@ -261,22 +262,22 @@ subroutine paramSet(length, lambda, depth, height, m0, c0, alpha, beta, gam, &
 end subroutine paramSet
 
 
-!==============================================================================
+!========================================================================
 !   Sets the initial conditions for the system
-!-----------------------------------------------------------------------------
+!------------------------------------------------------------------------
 !   For C, we have homogenous initial conditions, trivial to do
 !   For M, the innoculation point has a smooth curve to avoid sharp numerical 
 !     artifacts in the system. This is done with a polynomial f(x) = a*x^8+b, 
 !     this function is computed based on the depth and height parameters, 
 !     calculating b = height and a = b/(depth)^8
-!==============================================================================
+!========================================================================
 subroutine setInitialConditions(C,M,row,col,n,depth,height,yDel,MinitialCond)
     implicit none
     integer,intent(in) :: row,col,n,MinitialCond
     real,intent(in) :: depth, height, yDel
-    real,dimension(n),intent(out) :: C,M
+    real,dimension(0:n),intent(out) :: C,M
 
-    integer :: i,j
+    integer :: i,j,g
     real :: f,a       ! function for IC curve
     
     C = 1.; j = 0
@@ -286,8 +287,9 @@ subroutine setInitialConditions(C,M,row,col,n,depth,height,yDel,MinitialCond)
         a = -height/(depth)**4
         f = a*j*yDel + height
         do while(f > 0)
-            do i = 1,col
-                M(i+j*col) = f
+            do i = 0,col
+                g = i + j*(col+1)
+                M(g) = f
             enddo
             j = j+1
             f = a*(j*yDel)**4 + height
@@ -302,13 +304,13 @@ subroutine setInitialConditions(C,M,row,col,n,depth,height,yDel,MinitialCond)
 end subroutine setInitialConditions
 
 
-!==============================================================================
+!========================================================================
 !   Function f(C,M)
-!----------------------------------------------------------------------
+!-----------------------------------------------------------------
 !   fSelect == 7 should be used with gSelect == 2
 !   fSelect == 8 should be used with gSelect == 3
 !   otherwise gSelect == 1
-!==============================================================================
+!========================================================================
 subroutine fFunc(M,C,f,k,y,nu,m0,c0,gam,fSelect)
     implicit none    
     integer, intent(in) :: fSelect
@@ -334,9 +336,9 @@ subroutine fFunc(M,C,f,k,y,nu,m0,c0,gam,fSelect)
 end subroutine fFunc
 
 
-!==============================================================================
+!========================================================================
 !   Function d(M)
-!==============================================================================
+!========================================================================
 subroutine dFunc(M,d,delta,alpha,beta,dSelect)
     implicit none    
     integer,intent(in) :: alpha, beta, dSelect
@@ -348,9 +350,9 @@ subroutine dFunc(M,d,delta,alpha,beta,dSelect)
 end subroutine dFunc
 
 
-!==============================================================================
+!========================================================================
 !   Solves the solution, C
-!-----------------------------------------------------------------------------
+!------------------------------------------------------------------------
 !   Uses the trapizoidal rule for an ODE and solves for C.
 !   Different gSelects give different values for b and c. 
 !   gSelect = 1 --> g = nu*C/(k+C)
@@ -363,14 +365,14 @@ end subroutine dFunc
 !   gSelect = 5 --> C_t = -kC
 !   gSelect = 6 --> C_t = -C/(k+C)*M/nu
 !
-!==============================================================================
+!========================================================================
 subroutine solveC(M,Mnew,Csol,Cnew,row,col,n,k,y,m0,c0,gam,fSelect,&
                   tDel,nu,gSelect)
     implicit none 
     integer,intent(in) :: row,col,n,gSelect,fSelect
     real,intent(in) :: k,tDel,nu,y,m0,c0,gam
-    real,dimension(n),intent(in) :: M,Mnew,Csol
-    real,dimension(n),intent(out) :: Cnew
+    real,dimension(0:n),intent(in) :: M,Mnew,Csol
+    real,dimension(0:n),intent(out) :: Cnew
 
     integer :: i,j    ! grid index
     integer :: g      ! current grid point
@@ -384,9 +386,9 @@ subroutine solveC(M,Mnew,Csol,Cnew,row,col,n,k,y,m0,c0,gam,fSelect,&
 
     aux = tDel*0.5*nu
     
-    do i = 1,row
-        do j = 1,col
-            g = j + (i - 1) * col
+    do i = 0,row
+        do j = 0,col
+            g = j + i * (col + 1)
             
             if (gSelect == 1) then
                 b = k - Csol(g) + aux*(Mnew(g) + Csol(g)*M(g)/(k+Csol(g)) )
@@ -418,23 +420,23 @@ subroutine solveC(M,Mnew,Csol,Cnew,row,col,n,k,y,m0,c0,gam,fSelect,&
 end subroutine solveC
 
 
-!==============================================================================
+!========================================================================
 !   Generates matrix M in diagonal format for the current timestep
-!==============================================================================
+!========================================================================
 subroutine GenMatrixM(M,C,MatrixM,Mioff,Mrhs,row,col,n,ndiag,delta,nu,alpha, &
                       beta,k,m0,c0,gam,tDel,xDel,yDel,dSelect,fSelect,yConst)
     implicit none
     integer,intent(in) :: row,col,n,ndiag,alpha,beta,dSelect,fSelect
     real,intent(in) :: delta,k,m0,c0,gam,xDel,yDel,tDel,nu,yConst
-    real,dimension(n),intent(in) :: M,C
+    real,dimension(0:n),intent(in) :: M,C
 
-    real,dimension(n,ndiag),intent(out) :: MatrixM
-    real,dimension(n),intent(out) :: Mrhs
+    real,dimension(0:n,ndiag),intent(out) :: MatrixM
+    real,dimension(0:n),intent(out) :: Mrhs
     integer,dimension(ndiag),intent(out) :: Mioff
 
     real :: xCof,yCof
     real :: f
-    real,dimension(n) :: diff
+    real,dimension(0:n) :: diff
     integer :: x,y,g
 
     real :: tDela
@@ -447,66 +449,63 @@ subroutine GenMatrixM(M,C,MatrixM,Mioff,Mrhs,row,col,n,ndiag,delta,nu,alpha, &
     MatrixM(:,:) = 0
 
     ! Compute all the diffusion coefficients
-    do y = 1,n
+    do y = 0,n
         call dFunc(M(y), diff(y), delta, alpha, beta, dSelect)
     enddo
   
-    do y = 1,row
-        write(*,*) "y = ", y
-        do x = 1,col
-            g = x + (y - 1) * col
-      
-            if (y .NE. 1) then
-                MatrixM(g,1) = MatrixM(g,1) - yCof*0.5*(diff(g-col)+diff(g))
-                MatrixM(g,3) = MatrixM(g,3) + yCof*0.5*(diff(g-col)+diff(g))
+    do y = 0,row
+!        write(*,*) "y = ", y
+        do x = 0,col
+            g = x + y*(col+1)
+            if (y .NE. 0) then
+                MatrixM(g,1) = MatrixM(g,1)-yCof*0.5*(diff(g-(col+1))+diff(g))
+                MatrixM(g,3) = MatrixM(g,3)+yCof*0.5*(diff(g-(col+1))+diff(g))
             else
-                MatrixM(g,5) = MatrixM(g,5) - yCof*0.5*(diff(g+col)+diff(g))
-                MatrixM(g,3) = MatrixM(g,3) + yCof*0.5*(diff(g+col)+diff(g))
+                MatrixM(g,5) = MatrixM(g,5)-yCof*0.5*(diff(g+(col+1))+diff(g))
+                MatrixM(g,3) = MatrixM(g,3)+yCof*0.5*(diff(g+(col+1))+diff(g))
             endif
               
-            if (x .NE. 1) then
-                MatrixM(g,2) = MatrixM(g,2) - xCof*0.5*(diff(g-1)+diff(g))
-                MatrixM(g,3) = MatrixM(g,3) + xCof*0.5*(diff(g-1)+diff(g))
+            if (x .NE. 0) then
+                MatrixM(g,2) = MatrixM(g,2)-xCof*0.5*(diff(g-1)+diff(g))
+                MatrixM(g,3) = MatrixM(g,3)+xCof*0.5*(diff(g-1)+diff(g))
             else
-                MatrixM(g,4) = MatrixM(g,4) - xCof*0.5*(diff(g+1)+diff(g))
-                MatrixM(g,3) = MatrixM(g,3) + xCof*0.5*(diff(g+1)+diff(g))
+                MatrixM(g,4) = MatrixM(g,4)-xCof*0.5*(diff(g+1)+diff(g))
+                MatrixM(g,3) = MatrixM(g,3)+xCof*0.5*(diff(g+1)+diff(g))
             endif
 
             if (x .NE. col) then
-                MatrixM(g,4) = MatrixM(g,4) - xCof*0.5*(diff(g+1)+diff(g))
-                MatrixM(g,3) = MatrixM(g,3) + xCof*0.5*(diff(g+1)+diff(g))
+                MatrixM(g,4) = MatrixM(g,4)-xCof*0.5*(diff(g+1)+diff(g))
+                MatrixM(g,3) = MatrixM(g,3)+xCof*0.5*(diff(g+1)+diff(g))
             else
-                MatrixM(g,2) = MatrixM(g,2) - xCof*0.5*(diff(g-1)+diff(g))
-                MatrixM(g,3) = MatrixM(g,3) + xCof*0.5*(diff(g-1)+diff(g))
+                MatrixM(g,2) = MatrixM(g,2)-xCof*0.5*(diff(g-1)+diff(g))
+                MatrixM(g,3) = MatrixM(g,3)+xCof*0.5*(diff(g-1)+diff(g))
             endif
               
             if (y .NE. row) then
-                MatrixM(g,5) = MatrixM(g,5) - yCof*0.5*(diff(g+col)+diff(g))
-                MatrixM(g,3) = MatrixM(g,3) + yCof*0.5*(diff(g+col)+diff(g))
+                MatrixM(g,5) = MatrixM(g,5)-yCof*0.5*(diff(g+(col+1))+diff(g))
+                MatrixM(g,3) = MatrixM(g,3)+yCof*0.5*(diff(g+(col+1))+diff(g))
             else
-                MatrixM(g,1) = MatrixM(g,1) - yCof*0.5*(diff(g-col)+diff(g))
-                MatrixM(g,3) = MatrixM(g,3) + yCof*0.5*(diff(g-col)+diff(g))
+                MatrixM(g,1) = MatrixM(g,1)-yCof*0.5*(diff(g-(col+1))+diff(g))
+                MatrixM(g,3) = MatrixM(g,3)+yCof*0.5*(diff(g-(col+1))+diff(g))
             endif
             
             call fFunc(M(g),C(g),f,k,yConst,nu,m0,c0,gam,fSelect)
             MatrixM(g,3) = MatrixM(g,3) - f + (1/tDel)
             Mrhs(g) = M(g)/tDel
-write(*,"(I5,F10.6,F10.6,F10.6,F10.6,F10.6,F10.6,F10.6)") g,MatrixM(g,1),MatrixM(g,2),MatrixM(g,3),MatrixM(g,4),MatrixM(g,5),Mrhs(g)
+!write(*,"(I5,F10.6,F10.6,F10.6,F10.6,F10.6,F10.6)") g, MatrixM(g,1), MatrixM(g,2), MatrixM(g,3), MatrixM(g,4), MatrixM(g,5), Mrhs(g)
         enddo
     enddo
-    write(*,*) "[Debug 496] Printing Matrix"
-    call exit(1)
 
 end subroutine GenMatrixM
 
 
-!==============================================================================
+!========================================================================
 !   Solve Order 2
-!-----------------------------------------------------------------------------
+!------------------------------------------------------------------------
 !   1. Solves for M_{i+1} using C_i and M_i
 !   2. Solves for C_{i+1} using C_i, M_i, and M_{i+1}
 !   ... repeat until convergence
-!==============================================================================
+!========================================================================
 subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,yLen,xDel,yDel,&
     c0,m0,y,nu,gam,alpha,beta,k,delta,ndiag,e1,e2,nit,eSoln,dSelect,fSelect,&
     gSelect,avgIters,maxIters,avgNit,maxNit)
@@ -517,7 +516,7 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,yLen,xDel,yDel,&
   real,intent(in) :: eSoln
   real,intent(inout) :: e1,e2
   integer,intent(inout) :: nit
-  real,dimension(n),intent(out) :: M,C
+  real,dimension(0:n),intent(out) :: M,C
   real,intent(out) :: avgIters,maxIters,avgNit,maxNit
   
   integer :: counter        ! Counts the num. of iter. in system solver
@@ -527,11 +526,11 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,yLen,xDel,yDel,&
   real :: totalMassM        ! Total Biomass over region
   real :: totalMassC        ! Total Substrait over region
   
-  real,dimension(n) :: Mnew
-  real,dimension(n) :: Cnew
-  real,dimension(n,ndiag) :: MatrixM
-  real,dimension(n) :: Mrhs
-  real,dimension(n) :: Cprev, Mprev
+  real,dimension(0:n) :: Mnew
+  real,dimension(0:n) :: Cnew
+  real,dimension(0:n,ndiag) :: MatrixM
+  real,dimension(0:n) :: Mrhs
+  real,dimension(0:n) :: Cprev, Mprev
   integer,dimension(ndiag) :: Mioff 
   integer :: stopcritria 
   integer :: stat 
@@ -552,9 +551,9 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,yLen,xDel,yDel,&
   
   open(UNIT = 124, IOSTAT = stat, FILE = "peakInfo.dat", STATUS = "old")
   if (stat .EQ. 0) close(124, STATUS = "delete")
-  open(UNIT = 121, FILE = "peakInfo.dat", POSITION = "append", ACTION = "write")
+  open(UNIT=121,FILE="peakInfo.dat", POSITION = "append", ACTION = "write")
     
-  write(*,*) "   time    avgIter  maxIter      avgNit  maxNit        avgM        avgC"
+  write(*,*) "   time   avgIter  maxIter    avgNit  maxNit        avgM        avgC"
 
   do while(counter * tDel <= tEnd)
     ! Output every 100 times more then nOuts for the peak info
@@ -570,10 +569,10 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,yLen,xDel,yDel,&
     if (MOD(counter, filter) == 0) then
       call printToFile2D(n,row,col,M,C,yLen)
       if (counter == 0) then
-        write(*,'(F8.2,F12.2,I8,F12.2,I8,F12.6,F12.6)') 0.0, 0.0, &
+        write(*,'(F8.2,F10.2,I9,F10.2,I8,F12.6,F12.6)') 0.0, 0.0, &
           int(maxIters), 0.0, int(maxNit), totalMassM, totalMassC
       else
-        write(*,'(F8.2,F12.2,I8,F12.2,I8,F12.6,F12.6)') tDel*counter, &
+        write(*,'(F8.2,F10.2,I9,F10.2,I8,F12.6,F12.6)') tDel*counter, &
           real(avgIters/counter), int(maxIters), real(avgNit/avgIters), &
           int(maxNit),totalMassM, totalMassC
       endif
@@ -591,35 +590,46 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,yLen,xDel,yDel,&
     Cprev = C
     Mprev = M
 
-    do while(diffC + diffM > eSoln)
+    do while(diffC > eSoln .OR. diffM > eSoln)
         nit = 100*n
         e1 = 1.e-12
         e2 = e1
-        
+ write(*,*) countIters, diffC, diffM, Cnew(12),Mnew(12)
+       
         ! Solve M
         call GenMatrixM(Mprev,C,MatrixM,Mioff,Mrhs,row,col,n,ndiag,delta,nu,&
                     alpha,beta,k,m0,c0,gam,tDel,xDel,yDel,dSelect,fSelect,y)
-        call solveLSDIAG(n,ndiag,Mioff,MatrixM,Mnew,Mrhs,nit,e1,e2,stopcritria)
-  
+        call solveLSDIAG(n,ndiag,Mioff,MatrixM,Mnew,Mrhs,nit,e1,e2,&
+                    stopcritria)
+ write(*,*) countIters, diffC, diffM, Cnew(12),Mnew(12)
+ 
         ! Solve C
         call solveC(Mprev,Mnew,Cprev,Cnew,row,col,n,k,y,m0,c0,gam,fSelect,&
                   tDel,nu,gSelect)
 
         if(nit > maxNit) maxNit = nit
         avgNit = avgNit + nit
+ write(*,*) countIters, diffC, diffM, Cnew(12), Mnew(12)
 
-        call calcDiff(diffC, C, Cnew, row, col)
-        call calcDiff(diffM, M, Mnew, row, col)
+        call calcDiff(diffC, C, Cnew, n) 
+        call calcDiff(diffM, M, Mnew, n) 
 
         C = Cnew
         M = Mnew
         countIters = countIters+1
-        write(*,*) countIters, diffC, diffM, C(12),M(12)
+        if (countIters .GE. 1000) then
+          write(*,*) "[!] Not Converging"
+          call exit(-1)
+        endif
     enddo
     if(countIters > maxIters) maxIters = countIters
     avgIters = avgIters + countIters
     
     counter = counter + 1
+    if (counter .GE. 15) then
+      write(*,*) "[Debug 626] Exit"
+      call exit(1)
+    endif
   enddo
   avgNit = avgNit/(avgIters) ! avgIters right now is the total
   avgIters = avgIters/counter
@@ -630,42 +640,39 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,yLen,xDel,yDel,&
 end subroutine solveOrder2
 
 
-!==============================================================================
+!===================================================================
 !   Calculate the Total Mass
-!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------
 !   Uses Riemann Sums kind of concept to check if the program runs correctly
 !   since the total mass of the region can be computed and checked.
-!==============================================================================
+!===================================================================
 subroutine calcMass(X,totalMass,n,row,col)
-    implicit none
+  implicit none
     integer,intent(in) :: n,row,col
-    real,dimension(n),intent(in) :: X
+    real,dimension(0:n),intent(in) :: X
   
     real,intent(out) :: totalMass
   
-    integer :: i,j,g
+    integer :: i
   
     totalMass = 0
   
-    do i = 1,row
-        do j = 1,col
-            g = j +(i - 1) * col
-            totalMass = totalMass + X(g)
-        enddo
+    do i = 0,n
+        totalMass = totalMass + X(i)
     enddo
   
-    totalMass = totalMass / n
+    totalMass = totalMass / (n+1)
   
 end subroutine calcMass
 
 
-!==============================================================================
-!   Prints out the solution in a format accepted by gnuplot, used for graphing
-!-----------------------------------------------------------------------------
+!===================================================================
+!   Prints out the solution in a format for graphing in  gnuplot
+!-------------------------------------------------------------------
 !   Runs through the grid, row-by-row. The MOD and filter act to reduce the 
 !     number of grid points written, useful when comparing different grid 
 !     sizes.
-!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------
 !   Input:
 !     n      =  The problem size
 !     row    =  The number of rows
@@ -676,31 +683,31 @@ end subroutine calcMass
 !     yLen   =  The length of each y-grid slot
 !   Output:
 !     none
-!==============================================================================
+!===================================================================
 subroutine printToFile(n,row,col,M,C,xLen,yLen)
     implicit none
 
     integer,intent(in) :: n, row, col
     real,intent(in) ::xLen, yLen
-    real,dimension(n),intent(in) :: M,C
+    real,dimension(0:n),intent(in) :: M,C
 
     integer :: p
     integer :: i,j
     integer :: stat
   
-    !-------------------------------------------
+    !--------------------------------------
     ! Deletes the old output file if it exist
-    !-------------------------------------------
+    !--------------------------------------
     open(UNIT = 123, IOSTAT = stat, FILE = "output.dat", STATUS = "old")
     if (stat .EQ. 0) close(123, STATUS = "delete")
 
-    open(UNIT = 11, FILE = "output.dat", POSITION = "append", ACTION = "write")
+    open(UNIT = 11,FILE = "output.dat",POSITION = "append",ACTION = "write")
 
-    do, i=1,row
-        do, j=1,col
-            p = (j + (i-1)*col)
-            write(11,*) real(j-1)/real(col-1)*xLen, &
-                        real(i-1)/real(row-1)*yLen, M(p), C(p)
+    do, i=0,row
+        do, j=0,col
+            p = j + i * (col + 1)
+            write(11,*) real(j)/real(col)*xLen, &
+                        real(i)/real(row)*yLen, M(p), C(p)
         enddo
         write(11,*) ' '
     enddo
@@ -710,17 +717,17 @@ subroutine printToFile(n,row,col,M,C,xLen,yLen)
 end subroutine printToFile
 
 
-!==============================================================================
+!===================================================================
 !   Prints out the solution in a 2D format, used for graphing the Travelling
 !     Wave Example.
-!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------
 !   Runs through the grid, row-by-row. The MOD and filter act to reduce the 
 !     number of grid points written, useful when comparing different grid 
 !     sizes.
-!   Unique here is that the average of the x-axis is taken so that the system 
+!   Unique here is that the average of the x-axis is taken so that the system
 !     can be reduced to just y. Also written are the max and min for each y 
 !     value; this is used for showing that the system can be reduced.
-!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------
 !   Input:
 !     n      =  The problem size
 !     row    =  The number of rows
@@ -731,13 +738,13 @@ end subroutine printToFile
 !     yLen   =  The length of each y-grid slot
 !   Output:
 !     none
-!==============================================================================
+!===================================================================
 subroutine printToFile2D(n,row,col,M,C,yLen)
     implicit none
 
     integer,intent(in) :: n, row, col
     real,intent(in) :: yLen
-    real,dimension(n),intent(in) :: M,C
+    real,dimension(0:n),intent(in) :: M,C
 
     integer :: p
     integer :: i,j
@@ -746,13 +753,13 @@ subroutine printToFile2D(n,row,col,M,C,yLen)
     real :: maxM, minM, maxC, minC
     real :: y
   
-    !-------------------------------------------
+    !--------------------------------------
     ! Deletes the old output file if it exist
-    !-------------------------------------------
+    !--------------------------------------
     open(UNIT = 124, IOSTAT = stat, FILE = "2D_output.dat", STATUS = "old")
     if (stat .EQ. 0) close(124, STATUS = "delete")
 
-    open(UNIT = 12, FILE = "2D_output.dat", POSITION = "append", ACTION = "write")
+    open(UNIT = 12,FILE = "2D_output.dat",POSITION="append",ACTION="write")
     
     do, i=0,row
         averageM = 0
@@ -762,15 +769,7 @@ subroutine printToFile2D(n,row,col,M,C,yLen)
         minM = 1
         minC = 1
         do, j=0,col
-            if (i == 0 .and. j == 0) then
-                p = 1
-            else if (i == 0) then
-                p = j
-            else if (j == 0) then
-                p = 1 + (i-1)*col
-            else
-                p = j + (i-1)*col
-            endif
+            p = j + i*(col+1)
             averageM = averageM + M(p)
             averageC = averageC + C(p)
             if(M(p) .ge. maxM) then 
@@ -790,7 +789,8 @@ subroutine printToFile2D(n,row,col,M,C,yLen)
         averageC = averageC/(col+1)
         y = real(i)/real(row)*yLen
         write(12,'(f20.12,f20.12,f20.12)') y,averageM,averageC
-!write(12,'(f14.10,f14.10,f14.10,f14.10,f14.10,f14.10,f14.10)') y, averageM, averageC, minM, maxM, minC, maxC
+!write(12,'(f14.10,f14.10,f14.10,f14.10,f14.10,f14.10,f14.10)')&
+!      y, averageM, averageC, minM, maxM, minC, maxC
   enddo
   write(12,*) 
       
@@ -798,10 +798,10 @@ subroutine printToFile2D(n,row,col,M,C,yLen)
 end subroutine printToFile2D
 
 
-!==============================================================================
+!===================================================================
 !   Calculates the difference between each grid point for the solutions at
 !       different iterations
-!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------
 !   Input:
 !     row    =  The number of rows
 !     col    =  The number of columns
@@ -809,16 +809,16 @@ end subroutine printToFile2D
 !     Cnew   =  The current solution for substrait
 !   Output:
 !     diff   =  The average difference between the two C's
-!==============================================================================
-subroutine calcDiff(diff, C, Cnew, row, col)
-    integer, intent(in) :: row, col
-    real, dimension(row*col), intent(in) :: C, Cnew
+!===================================================================
+subroutine calcDiff(diff, C, Cnew, n)
+    integer, intent(in) :: n
+    real, dimension(0:n), intent(in) :: C, Cnew
     real, intent(out) :: diff
 
     integer :: i
 
     diff = 0
-    do i=1,row*col
+    do i=0,n
         diff = diff + abs(C(i) - Cnew(i))
     enddo
     diff = diff/real(row*col)
@@ -826,9 +826,10 @@ subroutine calcDiff(diff, C, Cnew, row, col)
 end subroutine calcDiff
 
 
-!==============================================================================
+!===================================================================
 !   Calculates the peak and interface info at a single timestep
-!-----------------------------------------------------------------------------
+!     Note: This is specific to the 2D problems.
+!-------------------------------------------------------------------
 !   Input:
 !     row    =  The number of rows
 !     col    =  The number of columns
@@ -837,12 +838,12 @@ end subroutine calcDiff
 !     peak   =  Peak location
 !     height =  Peak height
 !     intfac =  Interface location
-!==============================================================================
+!===================================================================
 subroutine calcPeakInterface(M, row, col, peak, height, intfac, yLen)
     implicit none
     integer, intent(in):: row,col
     real, intent(in) :: yLen
-    real, dimension(row*col), intent(in) :: M
+    real, dimension(0:(row+1)*(col+1)), intent(in) :: M
     real, intent(out) :: peak, height, intfac
 
     real :: hei
@@ -850,10 +851,10 @@ subroutine calcPeakInterface(M, row, col, peak, height, intfac, yLen)
     integer :: i,j,p
 
     hei = 0
-    do, i=1,row
-      y = real(i-1)/real(row-1)*yLen
-      do, j=1,col
-          p = (j + (i-1)*col)
+    do, i=0,row
+      y = real(i)/real(row)*yLen
+      do, j=0,col
+          p = (j + i*col)
           if (M(p) >= hei) then 
               peak = y
               hei = M(p)
@@ -868,9 +869,9 @@ subroutine calcPeakInterface(M, row, col, peak, height, intfac, yLen)
 end subroutine 
 
 
-!==============================================================================
+!===================================================================
 !   Writes a bunch of statistics to file
-!-----------------------------------------------------------------------------
+!-------------------------------------------------------------------
 !   Input:
 !       avgIters = average number of iterations from between solutions
 !       maxIters = maximum number of iterations from between solutions
@@ -879,7 +880,7 @@ end subroutine
 !       time     = time to complete solveOrder
 !   Output: 
 !       write everything to the file.
-!==============================================================================
+!===================================================================
 subroutine reportStats(avgIters,maxIters,avgNit,maxNit,time)
   implicit none
   real,intent(in)::avgIters,maxIters,avgNit,maxNit,time
@@ -887,10 +888,10 @@ subroutine reportStats(avgIters,maxIters,avgNit,maxNit,time)
 
   open(UNIT = 125, IOSTAT = stat, FILE = "statReport.dat", STATUS = "old")
   if (stat .EQ. 0) close(125, STATUS = "delete")
-  open(UNIT = 128, FILE = "statReport.dat", POSITION = "append", ACTION = "write")
+  open(UNIT=128,FILE="statReport.dat",POSITION="append",ACTION="write")
   
   write(128,*) "Statsitcs:"
-  write(128,*) "-------------------------------------------------------------"
+  write(128,*) "--------------------------------------------------------"
   write(128,*) "Time to compute = ", time
   write(128,*) ""
   write(128,*) "Avg Iters for iterating betn. soln. =", avgIters
@@ -905,16 +906,16 @@ end subroutine
 
 
 subroutine amuxd (n,x,y,diag,idiag,ioff) 
-!-----------------------------------------------------------------------
+!------------------------------------------------------------------
 !        Mnew times a vector in Diagonal storage format (DIA) 
 !        f90/f95 version of the sparskit f77 subroutine
-!----------------------------------------------------------------------- 
+!------------------------------------------------------------------ 
 ! multiplies a matrix by a vector when the original matrix is stored 
 ! in the diagonal storage format.
-!-----------------------------------------------------------------------
+!------------------------------------------------------------------
 !
 ! on entry:
-!----------
+!-----
 ! n     = row dimension of Mnew
 ! x     = real array of length equal to the column dimension of
 !         the Mnew matrix.
@@ -931,27 +932,25 @@ subroutine amuxd (n,x,y,diag,idiag,ioff)
 !          diag(i,k) contains the element a(i,i+ioff(k)) of the matrix.
 !
 ! on return:
-!-----------
+!------
 ! y     = real array of length n, containing the product y=Mnew*x
 !
-!-----------------------------------------------------------------------
+!------------------------------------------------------------------
 implicit none
     integer, intent(in)::  n, idiag
     integer, intent(in),dimension(idiag) :: ioff
-    real, dimension(n), intent(in) :: x    
+    real, dimension(0:n), intent(in) :: x    
     real, dimension(n,idiag), intent(in) :: diag
-    real, dimension(n), intent(out) :: y
+    real, dimension(0:n), intent(out) :: y
     integer :: j, io, i1, i2, i       
 
     !$omp parallel shared(y,diag,x,n) private(j,io,i1,i2)
 
-    !!$omp workshare
     !$omp do
-    do i=1,n
+    do i=0,n
         y(i)=0.  
     enddo
     !$omp enddo
-    !!$omp end workshare    
 
     do j=1, idiag
         io = ioff(j)
