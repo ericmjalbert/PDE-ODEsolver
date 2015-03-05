@@ -74,6 +74,7 @@ program cThermoPDEODE
     real :: avgIters, maxIters
     real :: avgNit, maxNit
     integer :: startTime, endTime, clock_rate, clock_max
+    real :: elapsedTime
     
     write(*,*) "Enter parameter file name: ex. 'parameter.txt' "
     write(*,'(A)', advance="no") "    "
@@ -146,12 +147,17 @@ program cThermoPDEODE
         
 
     write(*,*) "Starting Solver"
-    call system_clock(startTime, clock_rate, clock_max)
+    call system_clock(COUNT_RATE=clock_rate, COUNT_MAX=clock_max)
+    call system_clock(startTime)
     call solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,yLen,xDel,yDel,&
        c0,m0,y,nu,gam,alpha,beta,k,delta,ndiag,e1,e2,nit,esoln,dSelect,&
        fSelect,gSelect,avgIters,maxIters,avgNit,maxNit)
-    call system_clock(endTime, clock_rate, clock_max)
-    
+    call system_clock(endTime)
+   
+    ! Convert times into seconds
+    elapsedTime = real(endTime - startTime)/real(clock_rate)
+
+
 !    call solveOrder1(tEnd,nOuts,tDel,n,row,col,M,C,xLen,yLen,xDel,yDel&
 !       ,c0,m0,nu,gam,alpha,beta,k,delta,ndiag,e1,e2,nit,dSelect,fSelect)
   
@@ -159,14 +165,14 @@ program cThermoPDEODE
     write(*,*) "-------------------------------------------------------------"
     write(*,*) "Statsitcs:"
     write(*,*) "-------------------------------------------------------------"
-    write(*,*) "Time to compute = ", endTime-startTime
+    write(*,*) "Time to compute = ", elapsedTime
     write(*,*) ""
     write(*,*) "Avg Iters for iterating betn. soln. =", avgIters
     write(*,*) "Max Iters for iterating betn. soln. =", maxIters
     write(*,*) "Avg Iters for linear solver =", avgNit
     write(*,*) "Max Iters for linear solver =", maxNit  
     write(*,*) "Writing statistics to file"
-    call reportStats(avgIters,maxIters,avgNit,maxNit,endTime-startTime)
+    call reportStats(avgIters,maxIters,avgNit,maxNit,elapsedTime)
     
     write(*,*) "Execution completed"
   
@@ -446,7 +452,7 @@ subroutine GenMatrixM(M,C,MatrixM,Mioff,Mrhs,row,col,n,ndiag,delta,nu,alpha, &
     MatrixM(:,:) = 0
 
     ! Compute all the diffusion coefficients
-    !$omp parallel do shared(M,diff,delta,alpha,beta,dSelect) private(i)
+    !$omp parallel do shared(M,diff,delta,alpha,beta,dSelect)
     do i = 1,n
         call dFunc(M(i), diff(i), delta, alpha, beta, dSelect)
     enddo
@@ -455,36 +461,36 @@ subroutine GenMatrixM(M,C,MatrixM,Mioff,Mrhs,row,col,n,ndiag,delta,nu,alpha, &
     !!$omp parallel do shared(MatrixM,yCof,diff,Mrhs,tDel,M,C,k,yConst,nu,m0,c0,gam,fSelect) private(i, f)
     !$omp parallel do private(f)
     do i = 1,n
-        if (i .GE. n-row+1) then
-            MatrixM(i,1) = MatrixM(i,1) - yCof*0.5*(diff(i-col)+diff(i))
-            MatrixM(i,3) = MatrixM(i,3) + yCof*0.5*(diff(i-col)+diff(i))
-        else
+        if (i .LE. col) then
             MatrixM(i,5) = MatrixM(i,5) - yCof*0.5*(diff(i+col)+diff(i))
             MatrixM(i,3) = MatrixM(i,3) + yCof*0.5*(diff(i+col)+diff(i))
+        else
+            MatrixM(i,1) = MatrixM(i,1) - yCof*0.5*(diff(i-col)+diff(i))
+            MatrixM(i,3) = MatrixM(i,3) + yCof*0.5*(diff(i-col)+diff(i))         
         endif
           
-        if (MOD(i,col) == 0) then
-            MatrixM(i,2) = MatrixM(i,2) - xCof*0.5*(diff(i-1)+diff(i))
-            MatrixM(i,3) = MatrixM(i,3) + xCof*0.5*(diff(i-1)+diff(i))
-        else
-            MatrixM(i,4) = MatrixM(i,4) - xCof*0.5*(diff(i+1)+diff(i))
-            MatrixM(i,3) = MatrixM(i,3) + xCof*0.5*(diff(i+1)+diff(i))
-        endif
-
         if (MOD(i,col) == 1) then
             MatrixM(i,4) = MatrixM(i,4) - xCof*0.5*(diff(i+1)+diff(i))
             MatrixM(i,3) = MatrixM(i,3) + xCof*0.5*(diff(i+1)+diff(i))
         else
             MatrixM(i,2) = MatrixM(i,2) - xCof*0.5*(diff(i-1)+diff(i))
+            MatrixM(i,3) = MatrixM(i,3) + xCof*0.5*(diff(i-1)+diff(i))         
+        endif
+
+        if (MOD(i,col) == 0) then
+            MatrixM(i,2) = MatrixM(i,2) - xCof*0.5*(diff(i-1)+diff(i))
             MatrixM(i,3) = MatrixM(i,3) + xCof*0.5*(diff(i-1)+diff(i))
+        else
+            MatrixM(i,4) = MatrixM(i,4) - xCof*0.5*(diff(i+1)+diff(i))
+            MatrixM(i,3) = MatrixM(i,3) + xCof*0.5*(diff(i+1)+diff(i))         
         endif
           
-        if (i .LE. row) then
-            MatrixM(i,5) = MatrixM(i,5) - yCof*0.5*(diff(i+col)+diff(i))
-            MatrixM(i,3) = MatrixM(i,3) + yCof*0.5*(diff(i+col)+diff(i))
-        else
+        if  (i .GE. n-col) then
             MatrixM(i,1) = MatrixM(i,1) - yCof*0.5*(diff(i-col)+diff(i))
             MatrixM(i,3) = MatrixM(i,3) + yCof*0.5*(diff(i-col)+diff(i))
+        else
+            MatrixM(i,5) = MatrixM(i,5) - yCof*0.5*(diff(i+col)+diff(i))
+            MatrixM(i,3) = MatrixM(i,3) + yCof*0.5*(diff(i+col)+diff(i))         
         endif
         
         call fFunc(M(i),C(i),f,k,yConst,nu,m0,c0,gam,fSelect)
@@ -654,7 +660,7 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,yLen,xDel,yDel,&
         C = Cnew
         M = Mnew
         countIters = countIters+1
-        write(*,*) countIters, diffC, diffM, C(12),M(12)
+!        write(*,*) countIters, diffC, diffM, C(12),M(12)
     enddo
     if(countIters > maxIters) maxIters = countIters
     avgIters = avgIters + countIters
@@ -924,7 +930,7 @@ end subroutine
 subroutine reportStats(avgIters,maxIters,avgNit,maxNit,time)
   implicit none
   real,intent(in)::avgIters,maxIters,avgNit,maxNit
-  integer,intent(in)::time
+  real,intent(in)::time
   integer :: stat
 
   open(UNIT = 125, IOSTAT = stat, FILE = "statReport.dat", STATUS = "old")
