@@ -1,7 +1,7 @@
 !----------------------------------------------------------------------
 ! Parameters
 !----------------------------------------------------------------------
-  pSize     =   256                  ! Set number of grid lines
+  pSize     =   2048                  ! Set number of grid lines
   length    =   0.01                  ! length of region, refered to as "len"
   lambda    =   0.0078125             ! lambda = 1.0/128.0 ; width = lamb*len
   depth     =   0.0390625             ! depth of innoculation site

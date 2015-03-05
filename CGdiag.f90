@@ -1,24 +1,24 @@
 subroutine solveLSDIAG(n,ndiag,ioff,A,sol,rhs,nit,err1,err2,stopcrit)
-!--------------------------------------------------------------------------------------------------
+!----------------------------------------------------------------------------
 ! HJE FOR M6020
-!--------------------------------------------------------------------------------------------------
+!----------------------------------------------------------------------------
 ! uses the conjugate gradient method to solve Ax=b in diagonal format
-!--------------------------------------------------------------------------------------------------
+!----------------------------------------------------------------------------
 ! input:  n       problem size
 !         ndiag:  number of diagonals
 !         ioff:   offsets (distance of sub diagonals to main diagonal)
 !         A:      matrix values
 !         sol:    initial guess for iteration (will be overwritten with result)
 !         rhs:    the righ hand side of the linear system
-!         nit:    maximum number of iterations to be carried out (will be overwritten)
+!         nit:    maximum number of iterations to be carried out (overwritten)
 !         err1:   tolerance for 1st stopping criterion (will be overwritten)
 !         err2:   tolerance for 2nd stopping criterion (will be overwritten)
 ! output: sol:    solution of Ax=b
 !         nit:    number of iterations taken
 !         err1:   computed value for 1st stopping criterion
 !         err2:   computed value for 2nd stopping criterion
-!         stopcrit:  integer value that contains information which stopping criterions became active
-!---------------------------------------------------------------------------------------------------
+!         stopcrit:  int value that depict which stop criterions became active
+!----------------------------------------------------------------------------
 implicit none
  integer, intent(in)               :: n,ndiag
  real,dimension(n,ndiag),intent(in):: a

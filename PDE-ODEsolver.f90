@@ -73,7 +73,7 @@ program cThermoPDEODE
     ! Reporting variables
     real :: avgIters, maxIters
     real :: avgNit, maxNit
-    real :: startTime, endTime
+    integer :: startTime, endTime, clock_rate, clock_max
     
     write(*,*) "Enter parameter file name: ex. 'parameter.txt' "
     write(*,'(A)', advance="no") "    "
@@ -146,11 +146,11 @@ program cThermoPDEODE
         
 
     write(*,*) "Starting Solver"
-    call cpu_time(startTime)
+    call system_clock(startTime, clock_rate, clock_max)
     call solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,yLen,xDel,yDel,&
        c0,m0,y,nu,gam,alpha,beta,k,delta,ndiag,e1,e2,nit,esoln,dSelect,&
        fSelect,gSelect,avgIters,maxIters,avgNit,maxNit)
-    call cpu_time(endTime)
+    call system_clock(endTime, clock_rate, clock_max)
     
 !    call solveOrder1(tEnd,nOuts,tDel,n,row,col,M,C,xLen,yLen,xDel,yDel&
 !       ,c0,m0,nu,gam,alpha,beta,k,delta,ndiag,e1,e2,nit,dSelect,fSelect)
@@ -276,7 +276,7 @@ subroutine setInitialConditions(C,M,row,col,n,depth,height,yDel,MinitialCond)
     real,intent(in) :: depth, height, yDel
     real,dimension(n),intent(out) :: C,M
 
-    integer :: i,j
+    integer :: i,j,jstop
     real :: f,a       ! function for IC curve
     
     C = 1.; j = 0
@@ -284,21 +284,21 @@ subroutine setInitialConditions(C,M,row,col,n,depth,height,yDel,MinitialCond)
     if (MinitialCond == 1) then
         M = 0
         a = -height/(depth)**4
-        f = a*j*yDel + height
-        do while(f > 0)
+        f = a*(j*yDel)**4 + height
+        jstop = INT(depth/yDel)+1
+        !#omp parallel do private(f) shared(height,a) 
+        do j = 0, jstop
             do i = 1,col
                 M(i+j*col) = f
             enddo
-            j = j+1
             f = a*(j*yDel)**4 + height
         enddo
+        !#omp end parallel do
     else if (MinitialCond == 2) then
         M = height
     else if (MinitialCond == 3) then
         j = row ! have multiple innoculation points
     endif
-
-
 end subroutine setInitialConditions
 
 
@@ -321,7 +321,7 @@ subroutine fFunc(M,C,f,k,y,nu,m0,c0,gam,fSelect)
     if (fSelect == 3) f = (1. - M)
     if (fSelect == 4) f = (1. - C)*(C/(M+eps))
     if (fSelect == 5) f = y*nu*C/(k+C)*(1. - (M/(C+eps))**gam)
-    if (fSelect == 6) f = y*nu*C/(k+C)*(1. - (M*(k+C)/(nu*C+eps))**gam)
+    if (fSelect == 6) f = y*nu*C/(k+C)*(1. - (M*(k+C)/(nu*C+eps))**gam) 
     if (fSelect == 7) f = y*nu/k*C*(1. - (M*k/(nu*C+eps))**gam)
     if (fSelect == 8) f = y*nu*C/(k*M+C)*(1. -(M*(k*M+C)/(nu*C+eps))**gam)
     if (fSelect == 9) f = y*nu*(C**gam - M**gam)* C**(1-gam)/(k+C)
@@ -384,36 +384,34 @@ subroutine solveC(M,Mnew,Csol,Cnew,row,col,n,k,y,m0,c0,gam,fSelect,&
 
     aux = tDel*0.5*nu
     
-    do i = 1,row
-        do j = 1,col
-            g = j + (i - 1) * col
-            
-            if (gSelect == 1) then
-                b = k - Csol(g) + aux*(Mnew(g) + Csol(g)*M(g)/(k+Csol(g)) )
-                c = -k*Csol(g) + aux*k*Csol(g)*M(g)/(k + Csol(g))
-                Cnew(g) = 0.5 * (-b + SQRT(b*b - 4 * c))
-            else if (gSelect == 2) then
-                Cnew(g) = (k - aux*M(g))*Csol(g) / (aux*Mnew(g) + k)
-            else if (gSelect == 3) then
-                b = k*Mnew(g) - Csol(g) + aux*(Mnew(g) &
-                    + Csol(g)*M(g)/(k*Mnew(g)+Csol(g)) )
-                c = aux*k*Mnew(g)*Csol(g)*M(g)/(k*Mnew(g) + Csol(g)) &
-                    - k*Mnew(g)*Csol(g)
-                Cnew(g) = 0.5 * (-b + SQRT(b*b - 4 * c))
-            else if (gSelect == 4) then
-                call fFunc(Mnew(g),Csol(g),f,k,y,nu,m0,c0,gam,fSelect)
-                b = k - Csol(g) - tDel*Mnew(g)*((s-r)*f - s)
-                c = -k*Csol(g)
-                Cnew(g) = 0.5 * (-b + SQRT(b*b - 4*c))
-            else if (gSelect == 5) then
-                Cnew(g) = Csol(g)*(1-aux)/(1+aux)
-            endif
+    !#omp parallel do private(b,c) shared(Csol,aux,Mnew,M,k) 
+    do i = 1,n
+        if (gSelect == 1) then
+            b = k - Csol(i) + aux*(Mnew(i) + Csol(i)*M(i)/(k+Csol(i)) )
+            c = -k*Csol(i) + aux*k*Csol(i)*M(i)/(k + Csol(i))
+            Cnew(i) = 0.5 * (-b + SQRT(b*b - 4 * c))
+        else if (gSelect == 2) then
+            Cnew(i) = (k - aux*M(i))*Csol(i) / (aux*Mnew(i) + k)
+        else if (gSelect == 3) then
+            b = k*Mnew(i) - Csol(i) + aux*(Mnew(i) &
+                + Csol(i)*M(i)/(k*Mnew(i)+Csol(i)) )
+            c = aux*k*Mnew(i)*Csol(i)*M(i)/(k*Mnew(i) + Csol(i)) &
+                - k*Mnew(i)*Csol(i)
+            Cnew(i) = 0.5 * (-b + SQRT(b*b - 4 * c))
+        else if (gSelect == 4) then
+            call fFunc(Mnew(i),Csol(i),f,k,y,nu,m0,c0,gam,fSelect)
+            b = k - Csol(i) - tDel*Mnew(i)*((s-r)*f - s)
+            c = -k*Csol(i)
+            Cnew(i) = 0.5 * (-b + SQRT(b*b - 4*c))
+        else if (gSelect == 5) then
+            Cnew(i) = Csol(i)*(1-aux)/(1+aux)
+        endif
 
-            if (Cnew(g) .le. 0) then
-                Cnew(g) = 0
-            endif
-        enddo
+        if (Cnew(i) .le. 0) then
+            Cnew(i) = 0
+        endif
     enddo
+    !#omp end parallel do
 
 end subroutine solveC
 
@@ -435,7 +433,8 @@ subroutine GenMatrixM(M,C,MatrixM,Mioff,Mrhs,row,col,n,ndiag,delta,nu,alpha, &
     real :: xCof,yCof
     real :: f
     real,dimension(n) :: diff
-    integer :: x,y,g
+    !integer :: x,y,g
+    integer :: i
 
     real :: tDela
     tDela = tDel      ! Used for testing purposes
@@ -447,55 +446,96 @@ subroutine GenMatrixM(M,C,MatrixM,Mioff,Mrhs,row,col,n,ndiag,delta,nu,alpha, &
     MatrixM(:,:) = 0
 
     ! Compute all the diffusion coefficients
-    do y = 1,n
-        call dFunc(M(y), diff(y), delta, alpha, beta, dSelect)
+    !$omp parallel do shared(M,diff,delta,alpha,beta,dSelect) private(i)
+    do i = 1,n
+        call dFunc(M(i), diff(i), delta, alpha, beta, dSelect)
     enddo
-  
-    do y = 1,row
-        write(*,*) "y = ", y
-        do x = 1,col
-            g = x + (y - 1) * col
-      
-            if (y .NE. 1) then
-                MatrixM(g,1) = MatrixM(g,1) - yCof*0.5*(diff(g-col)+diff(g))
-                MatrixM(g,3) = MatrixM(g,3) + yCof*0.5*(diff(g-col)+diff(g))
-            else
-                MatrixM(g,5) = MatrixM(g,5) - yCof*0.5*(diff(g+col)+diff(g))
-                MatrixM(g,3) = MatrixM(g,3) + yCof*0.5*(diff(g+col)+diff(g))
-            endif
-              
-            if (x .NE. 1) then
-                MatrixM(g,2) = MatrixM(g,2) - xCof*0.5*(diff(g-1)+diff(g))
-                MatrixM(g,3) = MatrixM(g,3) + xCof*0.5*(diff(g-1)+diff(g))
-            else
-                MatrixM(g,4) = MatrixM(g,4) - xCof*0.5*(diff(g+1)+diff(g))
-                MatrixM(g,3) = MatrixM(g,3) + xCof*0.5*(diff(g+1)+diff(g))
-            endif
+    !$omp end parallel do
 
-            if (x .NE. col) then
-                MatrixM(g,4) = MatrixM(g,4) - xCof*0.5*(diff(g+1)+diff(g))
-                MatrixM(g,3) = MatrixM(g,3) + xCof*0.5*(diff(g+1)+diff(g))
-            else
-                MatrixM(g,2) = MatrixM(g,2) - xCof*0.5*(diff(g-1)+diff(g))
-                MatrixM(g,3) = MatrixM(g,3) + xCof*0.5*(diff(g-1)+diff(g))
-            endif
-              
-            if (y .NE. row) then
-                MatrixM(g,5) = MatrixM(g,5) - yCof*0.5*(diff(g+col)+diff(g))
-                MatrixM(g,3) = MatrixM(g,3) + yCof*0.5*(diff(g+col)+diff(g))
-            else
-                MatrixM(g,1) = MatrixM(g,1) - yCof*0.5*(diff(g-col)+diff(g))
-                MatrixM(g,3) = MatrixM(g,3) + yCof*0.5*(diff(g-col)+diff(g))
-            endif
-            
-            call fFunc(M(g),C(g),f,k,yConst,nu,m0,c0,gam,fSelect)
-            MatrixM(g,3) = MatrixM(g,3) - f + (1/tDel)
-            Mrhs(g) = M(g)/tDel
-write(*,"(I5,F10.6,F10.6,F10.6,F10.6,F10.6,F10.6,F10.6)") g,MatrixM(g,1),MatrixM(g,2),MatrixM(g,3),MatrixM(g,4),MatrixM(g,5),Mrhs(g)
-        enddo
+    !!$omp parallel do shared(MatrixM,yCof,diff,Mrhs,tDel,M,C,k,yConst,nu,m0,c0,gam,fSelect) private(i, f)
+    !$omp parallel do private(f)
+    do i = 1,n
+        if (i .GE. n-row+1) then
+            MatrixM(i,1) = MatrixM(i,1) - yCof*0.5*(diff(i-col)+diff(i))
+            MatrixM(i,3) = MatrixM(i,3) + yCof*0.5*(diff(i-col)+diff(i))
+        else
+            MatrixM(i,5) = MatrixM(i,5) - yCof*0.5*(diff(i+col)+diff(i))
+            MatrixM(i,3) = MatrixM(i,3) + yCof*0.5*(diff(i+col)+diff(i))
+        endif
+          
+        if (MOD(i,col) == 0) then
+            MatrixM(i,2) = MatrixM(i,2) - xCof*0.5*(diff(i-1)+diff(i))
+            MatrixM(i,3) = MatrixM(i,3) + xCof*0.5*(diff(i-1)+diff(i))
+        else
+            MatrixM(i,4) = MatrixM(i,4) - xCof*0.5*(diff(i+1)+diff(i))
+            MatrixM(i,3) = MatrixM(i,3) + xCof*0.5*(diff(i+1)+diff(i))
+        endif
+
+        if (MOD(i,col) == 1) then
+            MatrixM(i,4) = MatrixM(i,4) - xCof*0.5*(diff(i+1)+diff(i))
+            MatrixM(i,3) = MatrixM(i,3) + xCof*0.5*(diff(i+1)+diff(i))
+        else
+            MatrixM(i,2) = MatrixM(i,2) - xCof*0.5*(diff(i-1)+diff(i))
+            MatrixM(i,3) = MatrixM(i,3) + xCof*0.5*(diff(i-1)+diff(i))
+        endif
+          
+        if (i .LE. row) then
+            MatrixM(i,5) = MatrixM(i,5) - yCof*0.5*(diff(i+col)+diff(i))
+            MatrixM(i,3) = MatrixM(i,3) + yCof*0.5*(diff(i+col)+diff(i))
+        else
+            MatrixM(i,1) = MatrixM(i,1) - yCof*0.5*(diff(i-col)+diff(i))
+            MatrixM(i,3) = MatrixM(i,3) + yCof*0.5*(diff(i-col)+diff(i))
+        endif
+        
+        call fFunc(M(i),C(i),f,k,yConst,nu,m0,c0,gam,fSelect)
+        MatrixM(i,3) = MatrixM(i,3) - f + (1/tDel)
+        Mrhs(i) = M(i)/tDel
     enddo
-    write(*,*) "[Debug 496] Printing Matrix"
-    call exit(1)
+    !$omp end parallel do
+
+!
+!    do y = 1,row
+!        do x = 1,col
+!            g = x + (y - 1) * col
+!      
+!            if (y .NE. 1) then
+!                MatrixM(g,1) = MatrixM(g,1) - yCof*0.5*(diff(g-col)+diff(g))
+!                MatrixM(g,3) = MatrixM(g,3) + yCof*0.5*(diff(g-col)+diff(g))
+!            else
+!                MatrixM(g,5) = MatrixM(g,5) - yCof*0.5*(diff(g+col)+diff(g))
+!                MatrixM(g,3) = MatrixM(g,3) + yCof*0.5*(diff(g+col)+diff(g))
+!            endif
+!              
+!            if (x .NE. 1) then
+!                MatrixM(g,2) = MatrixM(g,2) - xCof*0.5*(diff(g-1)+diff(g))
+!                MatrixM(g,3) = MatrixM(g,3) + xCof*0.5*(diff(g-1)+diff(g))
+!            else
+!                MatrixM(g,4) = MatrixM(g,4) - xCof*0.5*(diff(g+1)+diff(g))
+!                MatrixM(g,3) = MatrixM(g,3) + xCof*0.5*(diff(g+1)+diff(g))
+!            endif
+!
+!            if (x .NE. col) then
+!                MatrixM(g,4) = MatrixM(g,4) - xCof*0.5*(diff(g+1)+diff(g))
+!                MatrixM(g,3) = MatrixM(g,3) + xCof*0.5*(diff(g+1)+diff(g))
+!            else
+!                MatrixM(g,2) = MatrixM(g,2) - xCof*0.5*(diff(g-1)+diff(g))
+!                MatrixM(g,3) = MatrixM(g,3) + xCof*0.5*(diff(g-1)+diff(g))
+!            endif
+!              
+!            if (y .NE. row) then
+!                MatrixM(g,5) = MatrixM(g,5) - yCof*0.5*(diff(g+col)+diff(g))
+!                MatrixM(g,3) = MatrixM(g,3) + yCof*0.5*(diff(g+col)+diff(g))
+!            else
+!                MatrixM(g,1) = MatrixM(g,1) - yCof*0.5*(diff(g-col)+diff(g))
+!                MatrixM(g,3) = MatrixM(g,3) + yCof*0.5*(diff(g-col)+diff(g))
+!            endif
+!            
+!            call fFunc(M(g),C(g),f,k,yConst,nu,m0,c0,gam,fSelect)
+!            MatrixM(g,3) = MatrixM(g,3) - f + (1/tDel)
+!            Mrhs(g) = M(g)/tDel
+!        enddo
+!    enddo
+!
 
 end subroutine GenMatrixM
 
@@ -584,7 +624,7 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,yLen,xDel,yDel,&
       call calcPeakInterface(M, row, col, peak, height, intfac, yLen)
       write (121,*) tDel*counter, peak, height, intfac
     endif
- 
+
     diffC = 1
     diffM = 1
     countIters = 0
@@ -646,14 +686,13 @@ subroutine calcMass(X,totalMass,n,row,col)
     integer :: i,j,g
   
     totalMass = 0
-  
-    do i = 1,row
-        do j = 1,col
-            g = j +(i - 1) * col
-            totalMass = totalMass + X(g)
-        enddo
+
+    !$omp parallel do reduction(+:totalMass) 
+    do i=1,n
+      totalMass = totalMass + X(i)
     enddo
-  
+    !$omp end parallel do 
+    
     totalMass = totalMass / n
   
 end subroutine calcMass
@@ -818,9 +857,11 @@ subroutine calcDiff(diff, C, Cnew, row, col)
     integer :: i
 
     diff = 0
+    !$omp parallel do reduction(+:diff) 
     do i=1,row*col
         diff = diff + abs(C(i) - Cnew(i))
     enddo
+    !$omp end parallel do
     diff = diff/real(row*col)
     
 end subroutine calcDiff
@@ -882,7 +923,8 @@ end subroutine
 !==============================================================================
 subroutine reportStats(avgIters,maxIters,avgNit,maxNit,time)
   implicit none
-  real,intent(in)::avgIters,maxIters,avgNit,maxNit,time
+  real,intent(in)::avgIters,maxIters,avgNit,maxNit
+  integer,intent(in)::time
   integer :: stat
 
   open(UNIT = 125, IOSTAT = stat, FILE = "statReport.dat", STATUS = "old")
