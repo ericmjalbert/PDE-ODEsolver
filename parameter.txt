@@ -1,7 +1,8 @@
 !----------------------------------------------------------------------
 ! Parameters
 !----------------------------------------------------------------------
-  pSize     =   2048                  ! Set number of grid lines
+  pSize     =   128                  ! Set number of grid lines
+  true2D    =   0                     ! if 1 then prob is 2D, otherwise 3D  
   length    =   0.01                  ! length of region, refered to as "len"
   lambda    =   0.0078125             ! lambda = 1.0/128.0 ; width = lamb*len
   depth     =   0.0390625             ! depth of innoculation site
@@ -20,7 +21,7 @@
   delta     =   delBar/(mu*length^2)  ! Non-dim delBar
   nu        =   nuBar/mu/c0           ! Non-dim nuBar
   nOuts     =   20                    ! Num. of solutions written to file
-  tEnd      =   40.                  ! The time at which computations stop
+  tEnd      =   80.                  ! The time at which computations stop
   yLen      =   1.                    ! Length of each x2 grid
   xLen      =   yLen*lambda
   tDel      =   0.01                 ! Change in time
@@ -36,7 +37,7 @@
   fSelect   = 12
   dSelect   = 3
   gSelect   = 1
-  MinitialCond = 1
+  MinitialCond = 3
 
 =======================================================================
 =======================================================================
@@ -108,6 +109,22 @@
 ! MinitialCond = 2:     (Homogenous Biomass)
 !------------------------------
 ! M = height
+!
+! MinitialCond = 3:     (Center Innoculation Point [3D])
+!------------------------------
+! M = 0
+! a = -height/(depth)**2
+! f = a*(j*yDel)**2 + height
+! jstop = INT(depth/yDel)+1
+! !#omp parallel do private(f,x,y) shared(height,a) 
+! do i = 1, n
+!   x = MOD(i, col)
+!   y = i / row
+!   f = a*yDel*yDel*(x*x + y*y) + height
+!   M(i) = f
+!   if (M(i) .LE. 0) M(i) = 0
+! enddo  
+!     
 !----------------------------------------------------------------------
 
 
