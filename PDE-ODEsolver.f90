@@ -66,6 +66,7 @@ program cThermoPDEODE
     ! Numerical Method Parameters
     integer :: pSize,row,col,n,ndiag,nit,nOuts
     real :: tEnd,xLen,yLen,tDel,yDel,xDel,e1,e2,esoln
+    integer :: true2D
 
     ! Solution variables
     real,dimension(:),allocatable  :: C, M
@@ -85,10 +86,16 @@ program cThermoPDEODE
     write(*,'(A, I5)') "     ndiag = ", ndiag
 
     write(*,*) "Getting problem size from file"
-    call getProbSize(pSize, filename, len(filename)) 
+    call getProbSize(pSize, true2D, filename, len(filename)) 
+    if (true2D == 1) then 
+      write(*,*) "    Problem is 2D"
+      col = 4
+    else if (true2D == 0) then 
+      write(*,*) "    Problem is 3D"
+      col = pSize
+    end if
     write(*,*) "    pSize = ", pSize
     row = pSize
-    col = 4
     n = pSize * col
     write(*,*) "    row   = ", row
     write(*,*) "    col   = ", col        
@@ -130,8 +137,7 @@ program cThermoPDEODE
     write(*,*) "    dSelect     = ", dSelect
     write(*,*) "    gSelect     = ", gSelect
     write(*,*) "    MinitialCond= ", MinitialCond
-    
-    write(*,*) "Allocating the size of arrays"
+   write(*,*) "Allocating the size of arrays"
     allocate(C(n),M(n))
     write(*,'(A,I6,A)') "    C and M are now dimension(", n, ") arrays"
 
@@ -151,7 +157,7 @@ program cThermoPDEODE
     call system_clock(startTime)
     call solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,yLen,xDel,yDel,&
        c0,m0,y,nu,gam,alpha,beta,k,delta,ndiag,e1,e2,nit,esoln,dSelect,&
-       fSelect,gSelect,avgIters,maxIters,avgNit,maxNit)
+       fSelect,gSelect,avgIters,maxIters,avgNit,maxNit,true2D)
     call system_clock(endTime)
    
     ! Convert times into seconds
@@ -185,9 +191,9 @@ end program
 !     This must be done first since the problem size is used in the variable 
 !   declaration of the arrays.
 !==============================================================================
-subroutine getProbSize(pSize, filename, nameLen) 
+subroutine getProbSize(pSize, true2D, filename, nameLen) 
     implicit none
-    integer,intent(out) :: pSize
+    integer,intent(out) :: pSize, true2D
     integer,intent(in)  :: nameLen
     character(nameLen),intent(in) :: filename
     character :: dum   ! Dummy variable
@@ -195,6 +201,7 @@ subroutine getProbSize(pSize, filename, nameLen)
     open(UNIT = 19, FILE = filename, STATUS = "old", ACTION = "read")
     read(19,*); read(19,*); read(19,*)  ! Skip first 3 lines
     read(19,*) dum, dum, pSize
+    read(19,*) dum, dum, true2D
     close(19)
 end subroutine getprobSize
 
@@ -223,7 +230,8 @@ subroutine paramSet(length, lambda, depth, height, m0, c0, alpha, beta, gam, &
     character :: dum, dum2      ! Dummy variable
     
     open(UNIT = 19, FILE = filename, STATUS = "old", ACTION = "read")
-    read(19,*); read(19,*); read(19,*); read(19,*)  ! Skip first 4 lines
+    ! Skip first 5 lines
+    read(19,*); read(19,*); read(19,*); read(19,*); read(19,*)  
 
     read(19,*) dum, dum2, length
     read(19,*) dum, dum2, lambda
@@ -255,7 +263,7 @@ subroutine paramSet(length, lambda, depth, height, m0, c0, alpha, beta, gam, &
     read(19,*) dum, dum2, dSelect
     read(19,*) dum, dum2, gSelect
     read(19,*) dum, dum2, MinitialCond
-    
+
     nuBar = mu*m0*1.5873    ! 1/0.63 = 1.5873
     k = kBar/c0
     delta = delBar/(mu*length*length)
@@ -282,7 +290,7 @@ subroutine setInitialConditions(C,M,row,col,n,depth,height,yDel,MinitialCond)
     real,intent(in) :: depth, height, yDel
     real,dimension(n),intent(out) :: C,M
 
-    integer :: i,j,jstop
+    integer :: i,j,jstop,x,y
     real :: f,a       ! function for IC curve
     
     C = 1.; j = 0
@@ -303,7 +311,21 @@ subroutine setInitialConditions(C,M,row,col,n,depth,height,yDel,MinitialCond)
     else if (MinitialCond == 2) then
         M = height
     else if (MinitialCond == 3) then
-        j = row ! have multiple innoculation points
+        M = 0
+        a = -height/(depth)**2
+        f = a*(j*yDel)**2 + height
+        jstop = INT(depth/yDel)+1
+        !#omp parallel do private(f,x,y) shared(height,a) 
+        do i = 1, n
+          x = MOD(i, col)
+          y = i / row
+          f = a*((x*yDel-0.5)*(x*yDel-0.5) + (y*yDel-0.5)*(y*yDel-0.5)) + height
+          M(i) = f
+          if (M(i) .LE. 0) M(i) = 0
+          write(*,*) i,x,y, f
+        enddo
+        !#omp end parallel do
+
     endif
 end subroutine setInitialConditions
 
@@ -499,50 +521,6 @@ subroutine GenMatrixM(M,C,MatrixM,Mioff,Mrhs,row,col,n,ndiag,delta,nu,alpha, &
     enddo
     !$omp end parallel do
 
-!
-!    do y = 1,row
-!        do x = 1,col
-!            g = x + (y - 1) * col
-!      
-!            if (y .NE. 1) then
-!                MatrixM(g,1) = MatrixM(g,1) - yCof*0.5*(diff(g-col)+diff(g))
-!                MatrixM(g,3) = MatrixM(g,3) + yCof*0.5*(diff(g-col)+diff(g))
-!            else
-!                MatrixM(g,5) = MatrixM(g,5) - yCof*0.5*(diff(g+col)+diff(g))
-!                MatrixM(g,3) = MatrixM(g,3) + yCof*0.5*(diff(g+col)+diff(g))
-!            endif
-!              
-!            if (x .NE. 1) then
-!                MatrixM(g,2) = MatrixM(g,2) - xCof*0.5*(diff(g-1)+diff(g))
-!                MatrixM(g,3) = MatrixM(g,3) + xCof*0.5*(diff(g-1)+diff(g))
-!            else
-!                MatrixM(g,4) = MatrixM(g,4) - xCof*0.5*(diff(g+1)+diff(g))
-!                MatrixM(g,3) = MatrixM(g,3) + xCof*0.5*(diff(g+1)+diff(g))
-!            endif
-!
-!            if (x .NE. col) then
-!                MatrixM(g,4) = MatrixM(g,4) - xCof*0.5*(diff(g+1)+diff(g))
-!                MatrixM(g,3) = MatrixM(g,3) + xCof*0.5*(diff(g+1)+diff(g))
-!            else
-!                MatrixM(g,2) = MatrixM(g,2) - xCof*0.5*(diff(g-1)+diff(g))
-!                MatrixM(g,3) = MatrixM(g,3) + xCof*0.5*(diff(g-1)+diff(g))
-!            endif
-!              
-!            if (y .NE. row) then
-!                MatrixM(g,5) = MatrixM(g,5) - yCof*0.5*(diff(g+col)+diff(g))
-!                MatrixM(g,3) = MatrixM(g,3) + yCof*0.5*(diff(g+col)+diff(g))
-!            else
-!                MatrixM(g,1) = MatrixM(g,1) - yCof*0.5*(diff(g-col)+diff(g))
-!                MatrixM(g,3) = MatrixM(g,3) + yCof*0.5*(diff(g-col)+diff(g))
-!            endif
-!            
-!            call fFunc(M(g),C(g),f,k,yConst,nu,m0,c0,gam,fSelect)
-!            MatrixM(g,3) = MatrixM(g,3) - f + (1/tDel)
-!            Mrhs(g) = M(g)/tDel
-!        enddo
-!    enddo
-!
-
 end subroutine GenMatrixM
 
 
@@ -555,10 +533,10 @@ end subroutine GenMatrixM
 !==============================================================================
 subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,yLen,xDel,yDel,&
     c0,m0,y,nu,gam,alpha,beta,k,delta,ndiag,e1,e2,nit,eSoln,dSelect,fSelect,&
-    gSelect,avgIters,maxIters,avgNit,maxNit)
+    gSelect,avgIters,maxIters,avgNit,maxNit,true2D)
   implicit none
   integer,intent(in) :: nOuts,n,row,col,alpha,beta,ndiag
-  integer,intent(in) :: dSelect,fSelect,gSelect
+  integer,intent(in) :: dSelect,fSelect,gSelect,true2D
   real,intent(in) :: tEnd,tDel,yLen,xDel,yDel,c0,m0,gam,k,delta,nu,y
   real,intent(in) :: eSoln
   real,intent(inout) :: e1,e2
@@ -596,10 +574,12 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,yLen,xDel,yDel,&
   if (stat .EQ. 0) close(124, STATUS = "delete")
   open(UNIT = 120, FILE = "total.dat", POSITION = "append", ACTION = "write")
   
-  open(UNIT = 124, IOSTAT = stat, FILE = "peakInfo.dat", STATUS = "old")
-  if (stat .EQ. 0) close(124, STATUS = "delete")
-  open(UNIT = 121, FILE = "peakInfo.dat", POSITION = "append", ACTION = "write")
-    
+  if (true2D == 1) then
+    open(UNIT = 124, IOSTAT = stat, FILE = "peakInfo.dat", STATUS = "old")
+    if (stat .EQ. 0) close(124, STATUS = "delete")
+    open(UNIT = 121, FILE = "peakInfo.dat", POSITION = "append", ACTION = "write")
+  end if    
+
   write(*,*) "   time    avgIter  maxIter      avgNit  maxNit        avgM        avgC"
 
   do while(counter * tDel <= tEnd)
@@ -607,14 +587,21 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,yLen,xDel,yDel,&
     if (MOD(counter, int(filter/100+1)) == 0) then
       call calcMass(M,totalMassM,n,row,col)
       call calcMass(C,totalMassC,n,row,col)
-      call calcPeakInterface(M, row, col, peak, height, intfac, yLen)
       write(120,*) counter*tDel, totalMassM, totalMassC
-      write (121,*) tDel*counter, peak, height, intfac
+      if (true2D == 1) then
+        call calcPeakInterface(M, row, col, peak, height, intfac, yLen)
+        write (121,*) tDel*counter, peak, height, intfac
+      end if
     endif 
   
     ! Write to file / report Total Mass
     if (MOD(counter, filter) == 0) then
-      call printToFile2D(n,row,col,M,C,yLen)
+      if (true2D == 1) then
+        call printToFile2D(n,row,col,M,C,yLen)
+      else
+        call printToFile(n,row,col,M,C,yLen,yLen)
+      end if
+
       if (counter == 0) then
         write(*,'(F8.2,F12.2,I8,F12.2,I8,F12.6,F12.6)') 0.0, 0.0, &
           int(maxIters), 0.0, int(maxNit), totalMassM, totalMassC
@@ -623,12 +610,6 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,yLen,xDel,yDel,&
           real(avgIters/counter), int(maxIters), real(avgNit/avgIters), &
           int(maxNit),totalMassM, totalMassC
       endif
-    endif
-
-    ! Output every 100 times more then nOuts for the peak info
-    if (MOD(counter, int(filter/100+1)) == 0) then
-      call calcPeakInterface(M, row, col, peak, height, intfac, yLen)
-      write (121,*) tDel*counter, peak, height, intfac
     endif
 
     diffC = 1
