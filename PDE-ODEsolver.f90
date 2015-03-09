@@ -139,7 +139,7 @@ program cThermoPDEODE
     write(*,*) "    MinitialCond= ", MinitialCond
    write(*,*) "Allocating the size of arrays"
     allocate(C(n),M(n))
-    write(*,'(A,I6,A)') "    C and M are now dimension(", n, ") arrays"
+    write(*,'(A,I12,A)') "    C and M are now dimension(", n, ") arrays"
 
     write(*,*) "Setting Initial Conditions"
     call setInitialConditions(C,M,row,col,n,depth,height,yDel,MinitialCond)
@@ -322,7 +322,6 @@ subroutine setInitialConditions(C,M,row,col,n,depth,height,yDel,MinitialCond)
           f = a*((x*yDel-0.5)*(x*yDel-0.5) + (y*yDel-0.5)*(y*yDel-0.5)) + height
           M(i) = f
           if (M(i) .LE. 0) M(i) = 0
-          write(*,*) i,x,y, f
         enddo
         !#omp end parallel do
 

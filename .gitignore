@@ -30,7 +30,6 @@
 # Data files and folders
 *.dat
 *Output
-ig_*
 
 # Extra Parameter Files
 [1-9]*.txt
