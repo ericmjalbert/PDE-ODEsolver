@@ -30,14 +30,15 @@ do
   #Opens gnuplot and << EOF write the commands to gnuplot 
   gnuplot << EOF
   set terminal post enhanced color eps
+  set view map
+  unset surf
+  set pm3d
   set xr[0:1]
-  set yr[0:1.1]
-  set zr[0:1]
+  set yr[0:1]
   set xlabel "x"
   set ylabel "y"
-  set view 45,45,1
   set output "biot$n.eps"
-  splot "./out$COUNTER.dat" using 1:2:3 with lines, "./out$COUNTER.dat" using 1:2:4 with lines
+  splot "./out$COUNTER.dat" using 1:2:3 with lines
 EOF
 #    set view 90,90 is FOR TRAV WAVE VIEW; y-vs.-z
   mv out$COUNTER.dat $DIRNAME/
