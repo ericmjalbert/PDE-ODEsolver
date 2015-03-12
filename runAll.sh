@@ -35,6 +35,7 @@ do
   set view map
   unset surf
   set pm3d
+  set size square
   set xlabel "x"
   set ylabel "y"
   set output "biot$n.eps"

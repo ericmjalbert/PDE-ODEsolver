@@ -35,6 +35,7 @@ do
   set pm3d
   set xr[0:1]
   set yr[0:1]
+  set size square
   set xlabel "x"
   set ylabel "y"
   set output "biot$n.eps"
