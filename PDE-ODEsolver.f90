@@ -300,14 +300,14 @@ subroutine setInitialConditions(C,M,row,col,n,depth,height,yDel,MinitialCond)
         a = -height/(depth)**4
         f = a*(j*yDel)**4 + height
         jstop = INT(depth/yDel)+1
-        !#omp parallel do private(f) shared(height,a) 
+        !$omp parallel do private(f) shared(height,a) 
         do j = 0, jstop
             do i = 1,col
                 M(i+j*col) = f
             enddo
             f = a*(j*yDel)**4 + height
         enddo
-        !#omp end parallel do
+        !$omp end parallel do
     else if (MinitialCond == 2) then
         M = height
     else if (MinitialCond == 3) then
@@ -315,7 +315,7 @@ subroutine setInitialConditions(C,M,row,col,n,depth,height,yDel,MinitialCond)
         a = -height/(depth)**2
         f = a*(j*yDel)**2 + height
         jstop = INT(depth/yDel)+1
-        !#omp parallel do private(f,x,y) shared(height,a) 
+        !$omp parallel do private(f,x,y) shared(height,a) 
         do i = 1, n
           x = MOD(i, col)
           y = i / row
@@ -323,7 +323,7 @@ subroutine setInitialConditions(C,M,row,col,n,depth,height,yDel,MinitialCond)
           M(i) = f
           if (M(i) .LE. 0) M(i) = 0
         enddo
-        !#omp end parallel do
+        !$omp end parallel do
 
     endif
 end subroutine setInitialConditions
@@ -411,41 +411,56 @@ subroutine solveC(M,Mnew,Csol,Cnew,row,col,n,k,y,m0,c0,gam,fSelect,&
 
     aux = tDel*0.5*nu
     
-    !#omp parallel do private(b,c) shared(Csol,aux,Mnew,M,k) 
-    do i = 1,n
-        if (gSelect == 1) then
-            b = k - Csol(i) + aux*(Mnew(i) + Csol(i)*M(i)/(k+Csol(i)) )
-            c = -k*Csol(i) + aux*k*Csol(i)*M(i)/(k + Csol(i))
-            Cnew(i) = 0.5 * (-b + SQRT(b*b - 4 * c))
-        else if (gSelect == 2) then
-            Cnew(i) = (k - aux*M(i))*Csol(i) / (aux*Mnew(i) + k)
-        else if (gSelect == 3) then
-            b = k*Mnew(i) - Csol(i) + aux*(Mnew(i) &
-                + Csol(i)*M(i)/(k*Mnew(i)+Csol(i)) )
-            c = aux*k*Mnew(i)*Csol(i)*M(i)/(k*Mnew(i) + Csol(i)) &
-                - k*Mnew(i)*Csol(i)
-            Cnew(i) = 0.5 * (-b + SQRT(b*b - 4 * c))
-        else if (gSelect == 4) then
-            call fFunc(Mnew(i),Csol(i),f,k,y,nu,m0,c0,gam,fSelect)
-            b = k - Csol(i) - tDel*Mnew(i)*((s-r)*f - s)
-            c = -k*Csol(i)
-            Cnew(i) = 0.5 * (-b + SQRT(b*b - 4*c))
-        else if (gSelect == 5) then
-            Cnew(i) = Csol(i)*(1-aux)/(1+aux)
-        endif
+    if (gSelect == 1) then
+     !$omp parallel do private(b,c) shared(k,Csol,aux,Mnew,M)
+      do i = 1,n 
+        b = k - Csol(i) + aux*(Mnew(i) + Csol(i)*M(i)/(k+Csol(i)) )
+        c = -k*Csol(i) + aux*k*Csol(i)*M(i)/(k + Csol(i))
+        Cnew(i) = 0.5 * (-b + SQRT(b*b - 4 * c))
+      enddo
+     !$omp end parallel do
+    else if (gSelect == 2) then
+      !$omp parallel do shared(k,Cnew,aux,M,Csol,Mnew)
+      do i = 1,n
+        Cnew(i) = (k - aux*M(i))*Csol(i) / (aux * Mnew(i) + k)
+      enddo
+      !$omp end parallel do
+    end if 
+    else if (gSelect == 3) then
+      !$omp parallel do private(b,c) shared(k,Cnew,aux,M,Csol,Mnew)
+      do i = 1,n
+        b = k*Mnew(i) - Csol(i) + aux*(Mnew(i) &
+            + Csol(i) * M(i) / (k*Mnew(i) + Csol(i)) )
+        c = aux*k*Mnew(i) * Csol(i) * M(i)/(k*Mnew(i) + Csol(i)) &
+            - k * Mnew(i) * Csol(i)
+        Cnew(i) = 0.5 * (-b + SQRT(b*b - 4*c))
+      enddo
+      !$omp end parallel do
+    end if 
+    else if (gSelect == 4) then
+      !$omp parallel do private(b,c,f) shared(k,Cnew,aux,M,Csol,Mnew,s,r)
+      do i = 1,n
+        call fFunc(Mnew(i),Csol(i),f,k,y,nu,m0,c0,gam,fSelect)
+        b = k - Csol(i) - tDel*Mnew(i)*((s-r)*f - s)
+        c = -k*Csol(i)
+        Cnew(i) = 0.5 * (-b + SQRT(b*b - 4*c))
+      enddo
+      !$omp end parallel do
+    end if     
+    else if (gSelect == 5) then
+      !$omp parallel do shared(k,Cnew,aux,M,Csol,Mnew)
+      do i = 1,n
+        Cnew(i) = Csol(i)*(1-aux)/(1+aux)      
+      enddo
+      !$omp end parallel do
+    end if    
+      
+    end subroutine solveC
 
-        if (Cnew(i) .le. 0) then
-            Cnew(i) = 0
-        endif
-    enddo
-    !#omp end parallel do
 
-end subroutine solveC
-
-
-!==============================================================================
+!====================================================================
 !   Generates matrix M in diagonal format for the current timestep
-!==============================================================================
+!====================================================================
 subroutine GenMatrixM(M,C,MatrixM,Mioff,Mrhs,row,col,n,ndiag,delta,nu,alpha, &
                       beta,k,m0,c0,gam,tDel,xDel,yDel,dSelect,fSelect,yConst)
     implicit none
@@ -649,6 +664,13 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,yLen,xDel,yDel,&
   enddo
   avgNit = avgNit/(avgIters) ! avgIters right now is the total
   avgIters = avgIters/counter
+
+  ! Print final solution
+  if (true2D == 1) then
+    call printToFile2D(n,row,col,M,C,yLen)
+  else
+    call printToFile(n,row,col,M,C,yLen,yLen)
+  end if
 
   close(120)
   close(121)
