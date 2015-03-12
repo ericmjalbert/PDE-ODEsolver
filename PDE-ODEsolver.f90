@@ -425,7 +425,6 @@ subroutine solveC(M,Mnew,Csol,Cnew,row,col,n,k,y,m0,c0,gam,fSelect,&
         Cnew(i) = (k - aux*M(i))*Csol(i) / (aux * Mnew(i) + k)
       enddo
       !$omp end parallel do
-    end if 
     else if (gSelect == 3) then
       !$omp parallel do private(b,c) shared(k,Cnew,aux,M,Csol,Mnew)
       do i = 1,n
@@ -436,7 +435,6 @@ subroutine solveC(M,Mnew,Csol,Cnew,row,col,n,k,y,m0,c0,gam,fSelect,&
         Cnew(i) = 0.5 * (-b + SQRT(b*b - 4*c))
       enddo
       !$omp end parallel do
-    end if 
     else if (gSelect == 4) then
       !$omp parallel do private(b,c,f) shared(k,Cnew,aux,M,Csol,Mnew,s,r)
       do i = 1,n
@@ -446,7 +444,6 @@ subroutine solveC(M,Mnew,Csol,Cnew,row,col,n,k,y,m0,c0,gam,fSelect,&
         Cnew(i) = 0.5 * (-b + SQRT(b*b - 4*c))
       enddo
       !$omp end parallel do
-    end if     
     else if (gSelect == 5) then
       !$omp parallel do shared(k,Cnew,aux,M,Csol,Mnew)
       do i = 1,n
