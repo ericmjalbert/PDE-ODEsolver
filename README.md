@@ -1,23 +1,19 @@
 # PDE-ODEsolver
-
 A numerical solver for coupled PDE-ODE systems modelling biofilm growth
 
 ## TO RUN
-'''
+```
 bash twoDimension_runall.sh FILENAME.txt
-'''
+```
   
-Note, that FILENAME.txt is the parameter file you use. You can copy the original parameter.txt and use that. The order of variables needs to be preserved.
-    
+Note, that `FILENAME.txt` is the parameter file you use. You can copy the original `parameter.txt` and use that. The order of variables needs to be preserved.
+
 ## OUTPUTTED
-Running the bash script will print the parameters to the screen and 
-then it will print
+Running the bash script will print the parameters to the screen and then it will print the following after every *nOuts* timesteps:
 
->time  avgIters maxIter    avgNit  maxNit      avgM       avgC" 
+    time     avgIters     maxIter     avgNit     maxNit     avgM     avgC
 
-after every 'nOuts' timesteps.
-Once fortran is done, the script will move all the output files into 
-another folder called 'FILNAMEOutput'. This folder will contain:
+Once fortran is done, the script will move all the output files into another folder called 'FILNAMEOutput'. This folder will contain the following:
 
 
     | 2D_outXX.dat      | The solution at outputted time XX.        |
@@ -41,12 +37,8 @@ another folder called 'FILNAMEOutput'. This folder will contain:
     |-------------------|-------------------------------------------|
     | total.dat         | The average M and C at each time....      |
     |                   | Formate: t, avg M(x), avg C(x)            | 
-    
-## NOTES
-Some parameter values make the problem too stiff to solve and computations begin to take a VERY long time. 
 
-Also there is not any measures for when the iterations between two solutions M and C fails to converge. So if the simulator gets stuck and doesn't move, its probably because the parameter set chosen results in a failed convergence (never documented this, so please do if it happens)
-    
-    
-    
-    
+## NOTES
+Some parameter values make the problem too stiff to solve and computations begin to take a **VERY** long time. 
+
+Also there is not any measures for when the iterations between two solutions *M* and *C* fails to converge. So if the simulator gets stuck and doesn't move, its probably because the parameter set chosen results in a failed convergence (never documented this, so please do if it happens)
