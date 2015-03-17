@@ -412,13 +412,11 @@ subroutine solveC(M,Mnew,Csol,Cnew,row,col,n,k,y,m0,c0,gam,fSelect,&
     aux = tDel*0.5*nu
     
     if (gSelect == 1) then
-      !$omp parallel do
       do i = 1,n 
         b = k - Csol(i) + aux*(Mnew(i) + Csol(i)*M(i)/(k+Csol(i)) )
         c = -k*Csol(i) + aux*k*Csol(i)*M(i)/(k + Csol(i))
         Cnew(i) = 0.5 * (-b + SQRT(b*b - 4 * c))
       enddo
-      !$omp end parallel do
     else if (gSelect == 2) then
       !$omp parallel do shared(k,Cnew,aux,M,Csol,Mnew)
       do i = 1,n
@@ -561,10 +559,9 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,yLen,xDel,yDel,&
   
   real :: totalMassM        ! Total Biomass over region
   real :: totalMassC        ! Total Substrait over region
-
+ 
   integer :: startTime, endTime, clock_rate, clock_max
   real :: mTime, cTime 
-
   real,dimension(n) :: Mnew
   real,dimension(n) :: Cnew
   real,dimension(n,ndiag) :: MatrixM
@@ -583,8 +580,7 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,yLen,xDel,yDel,&
   countIters = 0
   avgIters = 1 
   avgNit = 1 
-mTime = 0  
-cTime = 0
+  
 !  open(UNIT = 124, IOSTAT = stat, FILE = "total.dat", STATUS = "old")
 !  if (stat .EQ. 0) close(124, STATUS = "delete")
 !  open(UNIT = 120, FILE = "total.dat", POSITION = "append", ACTION = "write")
@@ -594,66 +590,69 @@ cTime = 0
 !    if (stat .EQ. 0) close(124, STATUS = "delete")
 !    open(UNIT = 121, FILE = "peakInfo.dat", POSITION = "append", ACTION = "write")
 !  end if    
+!
+!  write(*,*) "   time    avgIter  maxIter      avgNit  maxNit        avgM        avgC"
 
-  write(*,*) "   time    avgIter  maxIter      avgNit  maxNit        avgM        avgC"
-
-  do while(counter * tDel <= tEnd)
+  !do while(counter * tDel <= tEnd)
     ! Output every 100 times more then nOuts for the peak info
-    if (MOD(counter, int(filter/100+1)) == 0) then
-      call calcMass(M,totalMassM,n,row,col)
-      call calcMass(C,totalMassC,n,row,col)
+!    if (MOD(counter, int(filter/100+1)) == 0) then
+!      call calcMass(M,totalMassM,n,row,col)
+!      call calcMass(C,totalMassC,n,row,col)
 !      write(120,*) counter*tDel, totalMassM, totalMassC
 !      if (true2D == 1) then
 !        call calcPeakInterface(M, row, col, peak, height, intfac, yLen)
 !        write (121,*) tDel*counter, peak, height, intfac
 !      end if
-    endif 
+!    endif 
   
     ! Write to file / report Total Mass
-    if (MOD(counter, filter) == 0) then
-  !    if (true2D == 1) then
-  !      call printToFile2D(n,row,col,M,C,yLen)
-  !    else
-  !      call printToFile(n,row,col,M,C,yLen,yLen)
-  !    end if
+!    if (MOD(counter, filter) == 0) then
+!    if (true2D == 1) then
+!      call printToFile2D(n,row,col,M,C,yLen)
+!    else
+!      call printToFile(n,row,col,M,C,yLen,yLen)
+!    end if
 
-      if (counter == 0) then
-        write(*,'(F8.2,F12.2,I8,F12.2,I8,F12.6,F12.6)') 0.0, 0.0, &
-          int(maxIters), 0.0, int(maxNit), totalMassM, totalMassC
-      else
-        write(*,'(F8.2,F12.2,I8,F12.2,I8,F12.6,F12.6)') tDel*counter, &
-          real(avgIters/counter), int(maxIters), real(avgNit/avgIters), &
-          int(maxNit),totalMassM, totalMassC
-      endif
-    endif
+!      if (counter == 0) then
+!        write(*,'(F8.2,F12.2,I8,F12.2,I8,F12.6,F12.6)') 0.0, 0.0, &
+!          int(maxIters), 0.0, int(maxNit), totalMassM, totalMassC
+!      else
+!        write(*,'(F8.2,F12.2,I8,F12.2,I8,F12.6,F12.6)') tDel*counter, &
+!          real(avgIters/counter), int(maxIters), real(avgNit/avgIters), &
+!          int(maxNit),totalMassM, totalMassC
+!      endif
+!    endif
 
     diffC = 1
     diffM = 1
     countIters = 0
     Cprev = C
     Mprev = M
-
+mTime = 0
+cTime = 0
     do while(diffC + diffM > eSoln)
         nit = 100*n
         e1 = 1.e-12
         e2 = e1
         
         ! Solve M
-  call system_clock(COUNT_RATE=clock_rate, COUNT_MAX=clock_max)
-  call system_clock(startTime)
+    call system_clock(COUNT_RATE=clock_rate, COUNT_MAX=clock_max)
+    call system_clock(startTime)
         call GenMatrixM(Mprev,C,MatrixM,Mioff,Mrhs,row,col,n,ndiag,delta,nu,&
                     alpha,beta,k,m0,c0,gam,tDel,xDel,yDel,dSelect,fSelect,y)
         call solveLSDIAG(n,ndiag,Mioff,MatrixM,Mnew,Mrhs,nit,e1,e2,stopcritria)
-  call system_clock(endTime)
-  mTime = mTime + real(endTime - startTime)/real(clock_rate) 
-
+    call system_clock(endTime)
+    mTime = mTime + real(endTime - startTime)/real(clock_rate) 
+  
         ! Solve C
-  call system_clock(COUNT_RATE=clock_rate, COUNT_MAX=clock_max)
-  call system_clock(startTime)
-  call solveC(Mprev,Mnew,Cprev,Cnew,row,col,n,k,y,m0,c0,gam,fSelect,&
+    call system_clock(startTime)
+         call solveC(Mprev,Mnew,Cprev,Cnew,row,col,n,k,y,m0,c0,gam,fSelect,&
                   tDel,nu,gSelect)
-  call system_clock(endTime)
-  cTime = cTime + real(endTime - startTime)/real(clock_rate)        
+    call system_clock(endTime)
+    cTime = cTime + real(endTime - startTime)/real(clock_rate) 
+ 
+
+ 
 
         if(nit > maxNit) maxNit = nit
         avgNit = avgNit + nit
@@ -670,22 +669,18 @@ cTime = 0
     avgIters = avgIters + countIters
     
     counter = counter + 1
-  enddo
+  !enddo
   avgNit = avgNit/(avgIters) ! avgIters right now is the total
   avgIters = avgIters/counter
 
+    call system_clock(startTime)
   ! Print final solution
-!  if (true2D == 1) then
-!    call printToFile2D(n,row,col,M,C,yLen)
-!  else
-!    call printToFile(n,row,col,M,C,yLen,yLen)
-!  end if
-!
-!  close(120)
-!  close(121)
-write(*,*) "Solve M: ", mTime
-write(*,*) "Solve C: ", cTime
-  
+    call system_clock(endTime)
+   write(*,*) "Solving M: ", mTime 
+   write(*,*) "Solving C: ", cTime 
+
+
+
 end subroutine solveOrder2
 
 
