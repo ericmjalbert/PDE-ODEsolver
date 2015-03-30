@@ -299,8 +299,6 @@ subroutine setInitialConditions(C,M,row,col,n,depth,height,yDel,MinitialCond)
     else if (MinitialCond == 3) then
         j = row ! have multiple innoculation points
     endif
-
-
 end subroutine setInitialConditions
 
 
@@ -492,7 +490,7 @@ subroutine GenMatrixM(M,C,MatrixM,Mioff,Mrhs,row,col,n,ndiag,delta,nu,alpha, &
             call fFunc(M(g),C(g),f,k,yConst,nu,m0,c0,gam,fSelect)
             MatrixM(g,3) = MatrixM(g,3) - f + (1/tDel)
             Mrhs(g) = M(g)/tDel
-!write(*,"(I5,F10.6,F10.6,F10.6,F10.6,F10.6,F10.6)") g, MatrixM(g,1), MatrixM(g,2), MatrixM(g,3), MatrixM(g,4), MatrixM(g,5), Mrhs(g)
+            !write(*,"(I5,F10.6,F10.6,F10.6,F10.6,F10.6,F10.6)") g, MatrixM(g,1), MatrixM(g,2), MatrixM(g,3), MatrixM(g,4), MatrixM(g,5), Mrhs(g)
         enddo
     enddo
 
@@ -594,7 +592,7 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,yLen,xDel,yDel,&
         nit = 100*n
         e1 = 1.e-12
         e2 = e1
- write(*,*) countIters, diffC, diffM, Cnew(12),Mnew(12)
+ write(*,*) countIters, diffC, diffM, C(12),M(12)
        
         ! Solve M
         call GenMatrixM(Mprev,C,MatrixM,Mioff,Mrhs,row,col,n,ndiag,delta,nu,&
@@ -617,7 +615,7 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,yLen,xDel,yDel,&
         C = Cnew
         M = Mnew
         countIters = countIters+1
-        if (countIters .GE. 1000) then
+        if (countIters .GE. 100) then
           write(*,*) "[!] Not Converging"
           call exit(-1)
         endif
@@ -626,8 +624,8 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,yLen,xDel,yDel,&
     avgIters = avgIters + countIters
     
     counter = counter + 1
-    if (counter .GE. 15) then
-      write(*,*) "[Debug 626] Exit"
+    if (counter .GE. 1) then
+      write(*,*) "[Debug 628] Exit"
       call exit(1)
     endif
   enddo
