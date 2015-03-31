@@ -3,10 +3,12 @@ A numerical solver for coupled PDE-ODE systems modelling biofilm growth
 
 ## TO RUN
 ```
-bash twoDimension_runall.sh FILENAME.txt
+bash twoDimension_runall.sh FILENAME.txt [{omp, acc}]
 ```
   
-Note, that `FILENAME.txt` is the parameter file you use. You can copy the original `parameter.txt` and use that. The order of variables needs to be preserved.
+Notes:
+  1. `FILENAME.txt` is the parameter file you use. You can copy the original `parameter.txt` and use that. The order of variables needs to be preserved.
+  2. `[{omp,acc}]` is an optional argument, it specifies which set of parallel-compatible library you want to use. `omp` is for OpenMP, `acc` is for OpenACC. The default is `omp` if nothing is specified.
 
 ## OUTPUTTED
 Running the bash script will print the parameters to the screen and then it will print the following after every *nOuts* timesteps:
@@ -15,7 +17,7 @@ Running the bash script will print the parameters to the screen and then it will
 
 Once fortran is done, the script will move all the output files into another folder called 'FILNAMEOutput'. This folder will contain the following:
 
-
+    |-------------------|-------------------------------------------|
     | 2D_outXX.dat      | The solution at outputted time XX.        |
     |                   | Format: x, M(x), C(x)                     |
     |-------------------|-------------------------------------------|
@@ -37,6 +39,7 @@ Once fortran is done, the script will move all the output files into another fol
     |-------------------|-------------------------------------------|
     | total.dat         | The average M and C at each time....      |
     |                   | Formate: t, avg M(x), avg C(x)            | 
+    |-------------------|-------------------------------------------|
 
 ## NOTES
 Some parameter values make the problem too stiff to solve and computations begin to take a **VERY** long time. 

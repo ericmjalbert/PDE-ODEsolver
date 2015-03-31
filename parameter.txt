@@ -1,7 +1,7 @@
 !----------------------------------------------------------------------
 ! Parameters
 !----------------------------------------------------------------------
-  pSize     =   1024                  ! Set number of grid lines
+  pSize     =   128                  ! Set number of grid lines
   true2D    =   0                     ! if 1 then prob is 2D, otherwise 3D  
   length    =   0.01                  ! length of region, refered to as "len"
   lambda    =   0.0078125             ! lambda = 1.0/128.0 ; width = lamb*len
@@ -20,8 +20,8 @@
   k         =   kBar/c0               ! Non-dim kBar
   delta     =   delBar/(mu*length^2)  ! Non-dim delBar
   nu        =   nuBar/mu/c0           ! Non-dim nuBar
-  nOuts     =   120                   ! Num. of solutions written to file
-  tEnd      =   40.                  ! The time at which computations stop
+  nOuts     =   10                   ! Num. of solutions written to file
+  tEnd      =   20.                  ! The time at which computations stop
   yLen      =   1.                    ! Length of each x2 grid
   xLen      =   yLen*lambda
   tDel      =   0.01                 ! Change in time
