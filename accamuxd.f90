@@ -1,4 +1,4 @@
-subroutine accamuxd (n,x,y,diag,idiag,ioff) 
+subroutine amuxd (n,x,y,diag,idiag,ioff) 
 !-----------------------------------------------------------------------
 !        A times a vector in Diagonal storage format (DIA) 
 !        f90/f95 version of the sparskit f77 subroutine
@@ -55,4 +55,4 @@ implicit none
          !$acc end parallel loop  
       enddo
     
-end subroutine accamuxd
+end subroutine amuxd
