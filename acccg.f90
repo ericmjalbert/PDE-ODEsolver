@@ -58,7 +58,6 @@ implicit none
  do while(stopcrit==0)
     nit=nit+1
     rhoold=rho
-
     call dotProd(n,r,r,rho)
     
     if (nit==1) then
@@ -92,9 +91,13 @@ implicit none
     if (nit>maxit) stopcrit=-1
     if (err1<tol1) stopcrit=stopcrit-10
     if (err2<tol2) stopcrit=stopcrit-100
+ 
+   ! uncomment the next line to monitor convergence progress
+    write(*,'(I6,4(E14.7,X))') nit,err1,err2,maxval(sol),minval(sol)
 
-    ! uncomment the next line to monitor convergence progress
-    !write(*,'(I6,4(E14.7,X))') nit,err1,err2,maxval(sol),minval(sol)
+    ! reset error for next iteration
+    err1 = 0
+    err2 = 0
  enddo
 
  !$acc end data
