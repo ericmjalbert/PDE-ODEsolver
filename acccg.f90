@@ -29,7 +29,7 @@ implicit none
  integer,intent(inout)             :: nit
  integer,intent(out)               :: stopcrit
 
- real,dimension(n) :: r, z, p, q
+ real,dimension(n) :: r, z, p, q, dsol
  real :: rho, beta, rhoold, alfa, dot
 
  integer           :: maxit,i
