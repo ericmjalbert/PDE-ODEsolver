@@ -82,7 +82,7 @@ implicit none
     do i = 1, n
         dsol(i) = alfa*p(i)
         sol(i)=sol(i)+dsol(i)
-        r(i)=r(i)-dsol(i)
+        r(i)=r(i)-alfa*q(i)
         err1=max(err1,abs(r(i)))
         err2 = err2 + dsol(i) * dsol(i)
     enddo
