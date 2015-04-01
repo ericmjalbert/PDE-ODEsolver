@@ -43,7 +43,7 @@ implicit none
 
  rho=0.
  
- !$acc data copyin(rhs,a) copy(sol) create(r,p,q,z)
+ !$acc data copyin(rhs,a) copy(sol) create(r,p,q,z,dsol)
  call amuxd(n,sol,r,a,ndiag,ioff)
 
  !$acc kernels present(r,rhs)
@@ -58,7 +58,6 @@ implicit none
  do while(stopcrit==0)
     nit=nit+1
     rhoold=rho
-    normx=sqrt(sum(sol*sol))/n
 
     call dotProd(n,r,r,rho)
     
@@ -80,17 +79,19 @@ implicit none
 
     alfa=rho/dot
 
-    !$acc parallel loop present(sol,r,p,q) firstprivate(alfa)
+    !$acc parallel loop present(dsol,sol,r,p,q) firstprivate(alfa) reduction(max:err1) reduction(max:err2)
     do i = 1, n
-        sol(i)=sol(i)+alfa*p(i)
-        r(i)=r(i)-alfa*q(i)
+        dsol(i) = alfa*p(i)
+        sol(i)=sol(i)+dsol(i)
+        r(i)=r(i)-dsol(i)
+        err1=max(err1,abs(r(i)))
+        err2 = err2 + dsol(i) * dsol(i)
     enddo
+    err2 = sqrt(err2)/n
 
-    err1=sqrt(sum(r*r))/n
-    err2=abs(alfa)*sqrt(sum(p*p))/n
     if (nit>maxit) stopcrit=-1
-    !if (err1<tol1*(norma*normx+normb)) stopcrit=stopcrit-10
-    if (err2<tol2*normx) stopcrit=stopcrit-100
+    if (err1<tol1) stopcrit=stopcrit-10
+    if (err2<tol2) stopcrit=stopcrit-100
 
     ! uncomment the next line to monitor convergence progress
     !write(*,'(I6,4(E14.7,X))') nit,err1,err2,maxval(sol),minval(sol)
