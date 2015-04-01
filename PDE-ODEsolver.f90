@@ -77,31 +77,31 @@ program cThermoPDEODE
     integer :: startTime, endTime, clock_rate, clock_max
     real :: elapsedTime
     
-    write(*,*) "Enter parameter file name: ex. 'parameter.txt' "
-    write(*,'(A)', advance="no") "    "
+!    write(*,*) "Enter parameter file name: ex. 'parameter.txt' "
+!    write(*,'(A)', advance="no") "    "
     read(*,*) filename
 
-    write(*,*) "Setting Parameters that shouldn't change"
+!   write(*,*) "Setting Parameters that shouldn't change"
     ndiag = 5
-    write(*,'(A, I5)') "     ndiag = ", ndiag
+!    write(*,'(A, I5)') "     ndiag = ", ndiag
 
-    write(*,*) "Getting problem size from file"
+!    write(*,*) "Getting problem size from file"
     call getProbSize(pSize, true2D, filename, len(filename)) 
     if (true2D == 1) then 
-      write(*,*) "    Problem is 2D"
+!      write(*,*) "    Problem is 2D"
       col = 4
     else if (true2D == 0) then 
-      write(*,*) "    Problem is 3D"
+!      write(*,*) "    Problem is 3D"
       col = pSize
     end if
-    write(*,*) "    pSize = ", pSize
+!    write(*,*) "    pSize = ", pSize
     row = pSize
     n = pSize * col
-    write(*,*) "    row   = ", row
-    write(*,*) "    col   = ", col        
+!    write(*,*) "    row   = ", row
+!    write(*,*) "    col   = ", col        
     write(*,*) "    n     = ", n
 
-    write(*,*) "Opening Parameter file"
+!    write(*,*) "Opening Parameter file"
     call paramSet(length, lambda, depth, height, m0, c0, alpha, beta, gam, k, &
                   mu, y, nu, delta, nOuts, tEnd, xLen, yLen, tDel, e1, e2, & 
                   esoln, fSelect, dSelect, gSelect, MinitialCond, filename, &
@@ -109,50 +109,50 @@ program cThermoPDEODE
     yDel = yLen/real(row)
     xDel = yDel
     nit = n * 100
-    write(*,*) "Parameters set:"
-    write(*,*) "    length      = ", length
-    write(*,*) "    lambda      = ", lambda
-    write(*,*) "    depth       = ", depth
-    write(*,*) "    height      = ", height
-    write(*,*) "    m0          = ", m0
-    write(*,*) "    c0          = ", c0
-    write(*,*) "    alpha       = ", alpha
-    write(*,*) "    beta        = ", beta
-    write(*,*) "    gam         = ", gam
-    write(*,*) "    y           = ", y
-    write(*,*) "    mu          = ", mu
-    write(*,*) "    nu          = ", nu
-    write(*,*) "    delta       = ", delta
+!    write(*,*) "Parameters set:"
+!    write(*,*) "    length      = ", length
+!    write(*,*) "    lambda      = ", lambda
+!    write(*,*) "    depth       = ", depth
+!    write(*,*) "    height      = ", height
+!    write(*,*) "    m0          = ", m0
+!    write(*,*) "    c0          = ", c0
+!    write(*,*) "    alpha       = ", alpha
+!    write(*,*) "    beta        = ", beta
+!    write(*,*) "    gam         = ", gam
+!    write(*,*) "    y           = ", y
+!    write(*,*) "    mu          = ", mu
+!    write(*,*) "    nu          = ", nu
+!    write(*,*) "    delta       = ", delta
     write(*,*) "    nOuts       = ", nOuts
     write(*,*) "    tEnd        = ", tEnd
-    write(*,*) "    xLen        = ", xLen
-    write(*,*) "    yLen        = ", yLen
+!    write(*,*) "    xLen        = ", xLen
+!    write(*,*) "    yLen        = ", yLen
     write(*,*) "    tDel        = ", tDel
-    write(*,*) "    e1          = ", e1
-    write(*,*) "    e2          = ", e2
-    write(*,*) "    nit         = ", nit
-    write(*,*) "    xDel        = ", xDel
-    write(*,*) "    yDel        = ", yDel
-    write(*,*) "    fSelect     = ", fSelect
-    write(*,*) "    dSelect     = ", dSelect
-    write(*,*) "    gSelect     = ", gSelect
-    write(*,*) "    MinitialCond= ", MinitialCond
-   write(*,*) "Allocating the size of arrays"
+!    write(*,*) "    e1          = ", e1
+!    write(*,*) "    e2          = ", e2
+!    write(*,*) "    nit         = ", nit
+!    write(*,*) "    xDel        = ", xDel
+!    write(*,*) "    yDel        = ", yDel
+!    write(*,*) "    fSelect     = ", fSelect
+!    write(*,*) "    dSelect     = ", dSelect
+!    write(*,*) "    gSelect     = ", gSelect
+!    write(*,*) "    MinitialCond= ", MinitialCond
+!    write(*,*) "Allocating the size of arrays"
     allocate(C(n),M(n))
-    write(*,'(A,I12,A)') "    C and M are now dimension(", n, ") arrays"
+!    write(*,'(A,I12,A)') "    C and M are now dimension(", n, ") arrays"
 
-    write(*,*) "Setting Initial Conditions"
+!    write(*,*) "Setting Initial Conditions"
     call setInitialConditions(C,M,row,col,n,depth,height,yDel,MinitialCond)
-        write(*,*) "    C = 1"
+!        write(*,*) "    C = 1"
         if (MinitialCond == 1) then
-            write(*,*) "    M has non-homogenous Initial Conditions"
+!            write(*,*) "    M has non-homogenous Initial Conditions"
         else if (MinitialCond == 2) then
-            write(*,*) "    M has homogenous initial conditions"
-            write(*,*) "        M = ", height
+!            write(*,*) "    M has homogenous initial conditions"
+!            write(*,*) "        M = ", height
         endif
         
 
-    write(*,*) "Starting Solver"
+!    write(*,*) "Starting Solver"
     call system_clock(COUNT_RATE=clock_rate, COUNT_MAX=clock_max)
     call system_clock(startTime)
     call solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,yLen,xDel,yDel,&
