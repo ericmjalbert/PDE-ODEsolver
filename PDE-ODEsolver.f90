@@ -485,13 +485,15 @@ subroutine GenMatrixM(M,C,MatrixM,Mioff,Mrhs,row,col,n,ndiag,delta,nu,alpha, &
     MatrixM(:,:) = 0
 
     ! Compute all the diffusion coefficients
+    !$acc kernels
     !$omp parallel do shared(M,diff,delta,alpha,beta,dSelect)
     do i = 1,n
         call dFunc(M(i), diff(i), delta, alpha, beta, dSelect)
     enddo
     !$omp end parallel do
+    !$acc end kernels
 
-    !!$omp parallel do shared(MatrixM,yCof,diff,Mrhs,tDel,M,C,k,yConst,nu,m0,c0,gam,fSelect) private(i, f)
+    !$acc kernels
     !$omp parallel do private(f)
     do i = 1,n
         if (i .LE. col) then
@@ -531,6 +533,7 @@ subroutine GenMatrixM(M,C,MatrixM,Mioff,Mrhs,row,col,n,ndiag,delta,nu,alpha, &
         Mrhs(i) = M(i)/tDel
     enddo
     !$omp end parallel do
+    !$acc end kernels
 
 end subroutine GenMatrixM
 
@@ -637,7 +640,7 @@ cTime = 0
         nit = 100*n
         e1 = 1.e-12
         e2 = e1
-        
+  !$acc data       
         ! Solve M
   call system_clock(COUNT_RATE=clock_rate, COUNT_MAX=clock_max)
   call system_clock(startTime)
@@ -646,7 +649,7 @@ cTime = 0
         call solveLSDIAG(n,ndiag,Mioff,MatrixM,Mnew,Mrhs,nit,e1,e2,stopcritria)
   call system_clock(endTime)
   mTime = mTime + real(endTime - startTime)/real(clock_rate) 
-
+  !$acc end data
         ! Solve C
   call system_clock(COUNT_RATE=clock_rate, COUNT_MAX=clock_max)
   call system_clock(startTime)

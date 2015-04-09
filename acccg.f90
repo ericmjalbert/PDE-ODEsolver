@@ -28,6 +28,8 @@ implicit none
  real,intent(inout)                :: err1,err2
  integer,intent(inout)             :: nit
  integer,intent(out)               :: stopcrit
+ real :: dotProd
+ external dotProd
 
  real,dimension(n) :: r, z, p, q, dsol
  real :: rho, beta, rhoold, alfa, dot
@@ -38,10 +40,8 @@ implicit none
  ! initialization: set tolerances, max number of iterations
  ! and rough estimates of matrix and rhs norms for stopping criteria
  maxit=nit; tol1=err1; tol2=err2
- normA=maxval(abs(a)); normb=maxval(abs(rhs))
 
-
- rho=0.
+ rho=1.
  
  !$acc data copyin(rhs,a) copy(sol) create(r,p,q,z,dsol)
  call amuxd(n,sol,r,a,ndiag,ioff)
@@ -58,7 +58,7 @@ implicit none
  do while(stopcrit==0)
     nit=nit+1
     rhoold=rho
-    call dotProd(n,r,r,rho)
+    rho=dotProd(n,r,r)
     
     if (nit==1) then
         !$acc parallel loop present(p,r)
@@ -74,7 +74,7 @@ implicit none
     endif
     call amuxd(n,p,q,a,ndiag,ioff)
 
-    call dotProd(n,p,q,dot)
+    dot=dotProd(n,p,q)
 
     alfa=rho/dot
 
@@ -93,7 +93,7 @@ implicit none
     if (err2<tol2) stopcrit=stopcrit-100
  
    ! uncomment the next line to monitor convergence progress
-    write(*,'(I6,4(E14.7,X))') nit,err1,err2,maxval(sol),minval(sol)
+   ! write(*,'(I6,4(E14.7,X))') nit,err1,err2,maxval(sol),minval(sol)
 
     ! reset error for next iteration
     err1 = 0

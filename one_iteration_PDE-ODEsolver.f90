@@ -484,13 +484,14 @@ subroutine GenMatrixM(M,C,MatrixM,Mioff,Mrhs,row,col,n,ndiag,delta,nu,alpha, &
 
     ! Compute all the diffusion coefficients
     !$omp parallel do shared(M,diff,delta,alpha,beta,dSelect)
+    !$acc parallel loop
     do i = 1,n
         call dFunc(M(i), diff(i), delta, alpha, beta, dSelect)
     enddo
     !$omp end parallel do
 
-    !!$omp parallel do shared(MatrixM,yCof,diff,Mrhs,tDel,M,C,k,yConst,nu,m0,c0,gam,fSelect) private(i, f)
     !$omp parallel do private(f)
+    !$acc parallel loop
     do i = 1,n
         if (i .LE. col) then
             MatrixM(i,5) = MatrixM(i,5) - yCof*0.5*(diff(i+col)+diff(i))
@@ -630,11 +631,13 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,yLen,xDel,yDel,&
     Mprev = M
 mTime = 0
 cTime = 0
-    do while(diffC + diffM > eSoln)
         nit = 100*n
         e1 = 1.e-12
         e2 = e1
-        
+    
+
+    !$acc data
+           
         ! Solve M
     call system_clock(COUNT_RATE=clock_rate, COUNT_MAX=clock_max)
     call system_clock(startTime)
@@ -643,7 +646,8 @@ cTime = 0
         call solveLSDIAG(n,ndiag,Mioff,MatrixM,Mnew,Mrhs,nit,e1,e2,stopcritria)
     call system_clock(endTime)
     mTime = mTime + real(endTime - startTime)/real(clock_rate) 
-  
+    !$acc end data 
+
         ! Solve C
     call system_clock(startTime)
          call solveC(Mprev,Mnew,Cprev,Cnew,row,col,n,k,y,m0,c0,gam,fSelect,&
@@ -664,7 +668,6 @@ cTime = 0
         M = Mnew
         countIters = countIters+1
 !        write(*,*) countIters, diffC, diffM, C(12),M(12)
-    enddo
     if(countIters > maxIters) maxIters = countIters
     avgIters = avgIters + countIters
     

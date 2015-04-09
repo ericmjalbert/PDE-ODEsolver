@@ -28,7 +28,9 @@ implicit none
  real,intent(inout)                :: err1,err2
  integer,intent(inout)             :: nit
  integer,intent(out)               :: stopcrit
-
+ real :: dotProd
+ external dotProd
+ 
  real,dimension(n) :: r, z, p, q
  real :: rho, beta, rhoold, alfa, dot
 
@@ -56,7 +58,7 @@ implicit none
     rhoold=rho
     normx=sqrt(sum(sol*sol))/n
 
-    call dotProd(n,r,r,rho)
+    rho=dotProd(n,r,r)
     
     if (nit==1) then
         !$omp parallel do shared (p,r)
@@ -73,7 +75,7 @@ implicit none
         !$omp end parallel do
     endif
     call amuxd(n,p,q,a,ndiag,ioff)
-    call dotProd(n,p,q,dot)
+    dot=dotProd(n,p,q)
     alfa=rho/dot
     !$omp parallel do shared (sol,r,alfa,p) 
     do i = 1, n

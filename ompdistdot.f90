@@ -1,10 +1,10 @@
-subroutine dotProd(n,u,v,sol)
+real function dotProd(n,u,v)
 implicit none
     integer, intent(in) :: n
     real, dimension(n), intent(in) :: u,v
     integer :: i
 
-    real, intent(out) :: sol
+    real :: sol
 
     sol = 0.
     !$omp parallel do reduction(+:sol)
@@ -12,5 +12,5 @@ implicit none
         sol = sol + u(i) * v(i)
     enddo
     !$omp end parallel do
-
-end subroutine
+    dotProd=sol
+end function 

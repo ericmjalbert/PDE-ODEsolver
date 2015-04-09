@@ -20,8 +20,8 @@
   k         =   kBar/c0               ! Non-dim kBar
   delta     =   delBar/(mu*length^2)  ! Non-dim delBar
   nu        =   nuBar/mu/c0           ! Non-dim nuBar
-  nOuts     =   10                   ! Num. of solutions written to file
-  tEnd      =   20.                  ! The time at which computations stop
+  nOuts     =   10                  ! Num. of solutions written to file
+  tEnd      =   2.                  ! The time at which computations stop
   yLen      =   1.                    ! Length of each x2 grid
   xLen      =   yLen*lambda
   tDel      =   0.01                 ! Change in time
