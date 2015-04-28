@@ -77,9 +77,9 @@
 !----------------------------------------------------------------------
 !   Function g(C,M)
 !----------------------------------------------------------------------
-! gSelect = 1 --> g = nu*C/(k+C)
-! gSelect = 2 --> g = nu*C/k
-! gSelect = 3 --> g = nu*C/(k*M+C)
+! gSelect = 1 --> g = y*C/(k+C)
+! gSelect = 2 --> g = y*C/k
+! gSelect = 3 --> g = y*C/(k*M+C)
 ! gSelect = 4 --> C_t is (r+s)*blahblahblah
 ! gSelect = 5 --> C_t = -kC
 ! gSelect = 6 --> C_t = -C/(k+C)*M/nu

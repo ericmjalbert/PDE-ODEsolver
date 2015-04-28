@@ -164,9 +164,6 @@ program cThermoPDEODE
     elapsedTime = real(endTime - startTime)/real(clock_rate)
 
 
-!    call solveOrder1(tEnd,nOuts,tDel,n,row,col,M,C,xLen,yLen,xDel,yDel&
-!       ,c0,m0,nu,gam,alpha,beta,k,delta,ndiag,e1,e2,nit,dSelect,fSelect)
-  
     ! Report Statistics
     write(*,*) "-------------------------------------------------------------"
     write(*,*) "Statsitcs:"
