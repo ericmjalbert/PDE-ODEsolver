@@ -156,7 +156,7 @@ program cThermoPDEODE
     call system_clock(COUNT_RATE=clock_rate, COUNT_MAX=clock_max)
     call system_clock(startTime)
     call solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,yLen,xDel,yDel,&
-       c0,m0,y,nu,gam,alpha,beta,k,delta,ndiag,e1,e2,nit,esoln,dSelect,&
+       c0,m0,y,nu,mu,gam,alpha,beta,k,delta,ndiag,e1,e2,nit,esoln,dSelect,&
        fSelect,gSelect,avgIters,maxIters,avgNit,maxNit,true2D)
     call system_clock(endTime)
    
@@ -226,7 +226,7 @@ subroutine paramSet(length, lambda, depth, height, m0, c0, alpha, beta, gam, &
     integer, intent(in) :: nameLen
     character(nameLen), intent(in) :: filename
 
-    real :: kBar, nuBar, delBar
+    real :: kBar, yBar, delBar
     character :: dum, dum2      ! Dummy variable
     
     open(UNIT = 19, FILE = filename, STATUS = "old", ACTION = "read")
@@ -243,7 +243,7 @@ subroutine paramSet(length, lambda, depth, height, m0, c0, alpha, beta, gam, &
     read(19,*) dum, dum2, beta
     read(19,*) dum, dum2, gam
     read(19,*) dum, dum2, mu
-    read(19,*) dum, dum2, y
+    read(19,*) dum, dum2, nu
     read(19,*) dum, dum2, kBar
     read(19,*)                          ! Skip nuBar 
     read(19,*) dum, dum2, delBar
@@ -264,10 +264,10 @@ subroutine paramSet(length, lambda, depth, height, m0, c0, alpha, beta, gam, &
     read(19,*) dum, dum2, gSelect
     read(19,*) dum, dum2, MinitialCond
 
-    nuBar = mu*m0*1.5873    ! 1/0.63 = 1.5873
+    yBar = mu*m0*1.5873    ! 1/0.63 = 1.5873
     k = kBar/c0
     delta = delBar/(mu*length*length)
-    nu = nuBar/(mu*c0)
+    y = yBar/(mu*c0)
     xLen = yLen*lambda
 
     close(19)
@@ -310,6 +310,8 @@ subroutine setInitialConditions(C,M,row,col,n,depth,height,yDel,MinitialCond)
         !$omp end parallel do
     else if (MinitialCond == 2) then
         M = height
+
+    ! 3D initial conditions
     else if (MinitialCond == 3) then
         M = 0
         a = -height/(depth)**2
@@ -336,28 +338,28 @@ end subroutine setInitialConditions
 !   fSelect == 8 should be used with gSelect == 3
 !   otherwise gSelect == 1
 !==============================================================================
-subroutine fFunc(M,C,f,k,y,nu,m0,c0,gam,fSelect)
+subroutine fFunc(M,C,f,k,nu,mu,m0,c0,gam,fSelect)
     implicit none    
     integer, intent(in) :: fSelect
-    real, intent(in) :: M,C,k,m0,c0,gam,nu,y
+    real, intent(in) :: M,C,k,m0,c0,gam,mu,nu
     real, intent(out) :: f
     real :: eps
     eps = 0.00000001
-    if (fSelect == 1) f = y*C/ (k + C) * (1 - (M*m0/(C*c0+eps))**gam)
+    if (fSelect == 1) f = mu*C/ (k + C) * (1 - (M*m0/(C*c0+eps))**gam)
     if (fSelect == 2) f = 1.
     if (fSelect == 3) f = (1. - M)
     if (fSelect == 4) f = (1. - C)*(C/(M+eps))
-    if (fSelect == 5) f = y*nu*C/(k+C)*(1. - (M/(C+eps))**gam)
-    if (fSelect == 6) f = y*nu*C/(k+C)*(1. - (M*(k+C)/(nu*C+eps))**gam) 
-    if (fSelect == 7) f = y*nu/k*C*(1. - (M*k/(nu*C+eps))**gam)
-    if (fSelect == 8) f = y*nu*C/(k*M+C)*(1. -(M*(k*M+C)/(nu*C+eps))**gam)
-    if (fSelect == 9) f = y*nu*(C**gam - M**gam)* C**(1-gam)/(k+C)
-    if (fSelect == 10) f = y*nu*((C/(k+C))**gam - M**gam)*(C/(k+C))**(1-gam)
-    if (fSelect == 11) f = y*nu*(C**gam - M**gam)*C/(k+C)/k**gam
-    if (fSelect == 12) f = C/(k+C)-0.1*nu 
-    if (fSelect == 13) f = C/(k+C)
-    if (fSelect == 14) f = C/(k*M+C+eps)-0.1*nu
-    if (fSelect == 15) f = C/(k*M+C+eps)
+    if (fSelect == 5) f = mu*C/(k+C)*(1. - (M/(C+eps))**gam)
+    if (fSelect == 6) f = mu*C/(k+C)*(1. - (M*(k+C)/(mu*C+eps))**gam) 
+    if (fSelect == 7) f = mu/k*C*(1. - (M*k/(mu*C+eps))**gam)
+    if (fSelect == 8) f = mu*C/(k*M+C)*(1. -(M*(k*M+C)/(mu*C+eps))**gam)
+    if (fSelect == 9) f = mu*(C**gam - M**gam)* C**(1-gam)/(k+C)
+    if (fSelect == 10) f = mu*((C/(k+C))**gam - M**gam)*(C/(k+C))**(1-gam)
+    if (fSelect == 11) f = mu*(C**gam - M**gam)*C/(k+C)/k**gam
+    if (fSelect == 12) f = mu*C/(k+C)-nu 
+    if (fSelect == 13) f = mu*C/(k+C)
+    if (fSelect == 14) f = mu*C/(k*M+C+eps)-nu
+    if (fSelect == 15) f = mu*C/(k*M+C+eps)
 end subroutine fFunc
 
 
@@ -391,11 +393,11 @@ end subroutine dFunc
 !   gSelect = 6 --> C_t = -C/(k+C)*M/nu
 !
 !==============================================================================
-subroutine solveC(M,Mnew,Csol,Cnew,row,col,n,k,y,m0,c0,gam,fSelect,&
-                  tDel,nu,gSelect)
+subroutine solveC(M,Mnew,Csol,Cnew,row,col,n,k,y,m0,c0,gam,mu,nu,fSelect,&
+                  tDel,gSelect)
     implicit none 
     integer,intent(in) :: row,col,n,gSelect,fSelect
-    real,intent(in) :: k,tDel,nu,y,m0,c0,gam
+    real,intent(in) :: k,tDel,y,m0,c0,gam,mu,nu
     real,dimension(n),intent(in) :: M,Mnew,Csol
     real,dimension(n),intent(out) :: Cnew
 
@@ -409,7 +411,7 @@ subroutine solveC(M,Mnew,Csol,Cnew,row,col,n,k,y,m0,c0,gam,fSelect,&
     r = 1
     s = 0.5
 
-    aux = tDel*0.5*nu
+    aux = tDel*0.5*y
     
     if (gSelect == 1) then
      !$omp parallel do private(b,c) shared(k,Csol,aux,Mnew,M)
@@ -438,7 +440,7 @@ subroutine solveC(M,Mnew,Csol,Cnew,row,col,n,k,y,m0,c0,gam,fSelect,&
     else if (gSelect == 4) then
       !$omp parallel do private(b,c,f) shared(k,Cnew,aux,M,Csol,Mnew,s,r)
       do i = 1,n
-        call fFunc(Mnew(i),Csol(i),f,k,y,nu,m0,c0,gam,fSelect)
+        call fFunc(Mnew(i),Csol(i),f,k,nu,mu,m0,c0,gam,fSelect)
         b = k - Csol(i) - tDel*Mnew(i)*((s-r)*f - s)
         c = -k*Csol(i)
         Cnew(i) = 0.5 * (-b + SQRT(b*b - 4*c))
@@ -458,11 +460,12 @@ subroutine solveC(M,Mnew,Csol,Cnew,row,col,n,k,y,m0,c0,gam,fSelect,&
 !====================================================================
 !   Generates matrix M in diagonal format for the current timestep
 !====================================================================
-subroutine GenMatrixM(M,C,MatrixM,Mioff,Mrhs,row,col,n,ndiag,delta,nu,alpha, &
-                      beta,k,m0,c0,gam,tDel,xDel,yDel,dSelect,fSelect,yConst)
+subroutine GenMatrixM(M,C,MatrixM,Mioff,Mrhs,row,col,n,ndiag,delta,nu,mu,&
+                      alpha,beta,k,m0,c0,gam,tDel,xDel,yDel,dSelect,&
+                      fSelect,yConst)
     implicit none
     integer,intent(in) :: row,col,n,ndiag,alpha,beta,dSelect,fSelect
-    real,intent(in) :: delta,k,m0,c0,gam,xDel,yDel,tDel,nu,yConst
+    real,intent(in) :: delta,k,m0,c0,gam,xDel,yDel,tDel,nu,mu,yConst
     real,dimension(n),intent(in) :: M,C
 
     real,dimension(n,ndiag),intent(out) :: MatrixM
@@ -526,7 +529,7 @@ subroutine GenMatrixM(M,C,MatrixM,Mioff,Mrhs,row,col,n,ndiag,delta,nu,alpha, &
             MatrixM(i,3) = MatrixM(i,3) + yCof*0.5*(diff(i+col)+diff(i))         
         endif
         
-        call fFunc(M(i),C(i),f,k,yConst,nu,m0,c0,gam,fSelect)
+        call fFunc(M(i),C(i),f,k,nu,mu,m0,c0,gam,fSelect)
         MatrixM(i,3) = MatrixM(i,3) - f + (1/tDel)
         Mrhs(i) = M(i)/tDel
     enddo
@@ -543,12 +546,12 @@ end subroutine GenMatrixM
 !   ... repeat until convergence
 !==============================================================================
 subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,yLen,xDel,yDel,&
-    c0,m0,y,nu,gam,alpha,beta,k,delta,ndiag,e1,e2,nit,eSoln,dSelect,fSelect,&
+    c0,m0,y,nu,mu,gam,alpha,beta,k,delta,ndiag,e1,e2,nit,eSoln,dSelect,fSelect,&
     gSelect,avgIters,maxIters,avgNit,maxNit,true2D)
   implicit none
   integer,intent(in) :: nOuts,n,row,col,alpha,beta,ndiag
   integer,intent(in) :: dSelect,fSelect,gSelect,true2D
-  real,intent(in) :: tEnd,tDel,yLen,xDel,yDel,c0,m0,gam,k,delta,nu,y
+  real,intent(in) :: tEnd,tDel,yLen,xDel,yDel,c0,m0,gam,k,delta,nu,mu,y
   real,intent(in) :: eSoln
   real,intent(inout) :: e1,e2
   integer,intent(inout) :: nit
@@ -635,13 +638,13 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,yLen,xDel,yDel,&
         e2 = e1
         
         ! Solve M
-        call GenMatrixM(Mprev,C,MatrixM,Mioff,Mrhs,row,col,n,ndiag,delta,nu,&
+        call GenMatrixM(Mprev,C,MatrixM,Mioff,Mrhs,row,col,n,ndiag,delta,nu,mu,&
                     alpha,beta,k,m0,c0,gam,tDel,xDel,yDel,dSelect,fSelect,y)
         call solveLSDIAG(n,ndiag,Mioff,MatrixM,Mnew,Mrhs,nit,e1,e2,stopcritria)
   
         ! Solve C
-        call solveC(Mprev,Mnew,Cprev,Cnew,row,col,n,k,y,m0,c0,gam,fSelect,&
-                  tDel,nu,gSelect)
+        call solveC(Mprev,Mnew,Cprev,Cnew,row,col,n,k,y,m0,c0,gam,mu,nu,fSelect,&
+                  tDel,gSelect)
 
         if(nit > maxNit) maxNit = nit
         avgNit = avgNit + nit
@@ -652,6 +655,12 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,yLen,xDel,yDel,&
         C = Cnew
         M = Mnew
         countIters = countIters+1
+
+        if (countIters > 100) then
+          write(*,*) "[!] Over 100 iterations in one timestep"
+          write(*,*) "[!] Solutions not converging. Exit!"
+          exit
+        end if
 !        write(*,*) countIters, diffC, diffM, C(12),M(12)
     enddo
     if(countIters > maxIters) maxIters = countIters
