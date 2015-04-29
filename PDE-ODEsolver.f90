@@ -353,10 +353,10 @@ subroutine fFunc(M,C,f,k,nu,mu,m0,c0,gam,fSelect)
     if (fSelect == 9) f = mu*(C**gam - M**gam)* C**(1-gam)/(k+C)
     if (fSelect == 10) f = mu*((C/(k+C))**gam - M**gam)*(C/(k+C))**(1-gam)
     if (fSelect == 11) f = mu*(C**gam - M**gam)*C/(k+C)/k**gam
-    if (fSelect == 12) f = mu*C/(k+C)-nu 
-    if (fSelect == 13) f = mu*C/(k+C)
-    if (fSelect == 14) f = mu*C/(k*M+C+eps)-nu
-    if (fSelect == 15) f = mu*C/(k*M+C+eps)
+    if (fSelect == 12) f = C/(k+C)-nu 
+    if (fSelect == 13) f = C/(k+C)
+    if (fSelect == 14) f = C/(k*M+C+eps)-nu
+    if (fSelect == 15) f = C/(k*M+C+eps)
 end subroutine fFunc
 
 

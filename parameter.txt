@@ -7,21 +7,21 @@
   lambda    =   0.0078125             ! lambda = 1.0/128.0 ; width = lamb*len
   depth     =   0.0390625             ! depth of innoculation site
   height    =   0.10                  ! height of innoculation site
-  m0        =   10000                 ! I.C. for biomass
+  m0        =   30.                   ! I.C. for biomass
   c0        =   30.                   ! I.C. for substrait 
   alpha     =   4                     ! exponent in D(M)
   beta      =   4                     ! exponent in D(M)
   gam       =   0.5                   ! exponent in f(C,M)
-  mu        =   6.0                   ! Growth rate of Bacteria
+  mu        =   0.5                   ! Growth rate of Bacteria
   nu        =   0.1                   ! Death rate 
-  kBar      =   4.0                   ! Half-Sat point
+  kBar      =   0.4                   ! Half-Sat point
   yBar     =   mu*m0/0.63             ! Yield rate 
   delBar    =   0.0000001             ! diffusion parameter
   k         =   kBar/c0               ! Non-dim kBar
   delta     =   delBar/(mu*length^2)  ! Non-dim delBar
   y        =   nuBar/mu/c0            ! Non-dim yBar
-  nOuts     =   100                   ! Num. of solutions written to file
-  tEnd      =   100.                   ! The time at which computations stop
+  nOuts     =   20                   ! Num. of solutions written to file
+  tEnd      =   20.                   ! The time at which computations stop
   yLen      =   1.                    ! Length of each x2 grid
   xLen      =   yLen*lambda
   tDel      =   0.01                  ! Change in time
