@@ -1,40 +1,28 @@
 !----------------------------------------------------------------------
 ! Parameters
 !----------------------------------------------------------------------
-  pSize     =   128                  ! Set number of grid lines
-  true2D    =   0                     ! if 1 then prob is 2D, otherwise 3D  
-  length    =   0.01                  ! length of region, refered to as "len"
-  lambda    =   0.0078125             ! lambda = 1.0/128.0 ; width = lamb*len
-  depth     =   0.0390625             ! depth of innoculation site
-  height    =   0.10                  ! height of innoculation site
-  m0        =   30.                   ! I.C. for biomass
-  c0        =   30.                   ! I.C. for substrait 
-  alpha     =   4                     ! exponent in D(M)
-  beta      =   4                     ! exponent in D(M)
-  gam       =   0.5                   ! exponent in f(C,M)
-  mu        =   0.5                   ! Growth rate of Bacteria
-  nu        =   0.1                   ! Death rate 
-  kBar      =   0.4                   ! Half-Sat point
-  yBar     =   mu*m0/0.63             ! Yield rate 
-  delBar    =   0.0000001             ! diffusion parameter
-  k         =   kBar/c0               ! Non-dim kBar
-  delta     =   delBar/(mu*length^2)  ! Non-dim delBar
-  y        =   nuBar/mu/c0            ! Non-dim yBar
-  nOuts     =   20                   ! Num. of solutions written to file
-  tEnd      =   20.                   ! The time at which computations stop
-  yLen      =   1.                    ! Length of each x2 grid
-  xLen      =   yLen*lambda
-  tDel      =   0.01                  ! Change in time
-  yDel      =   yLen/real(row)        ! Change in x2
-  xDel      =   yDel                  ! Change in x1 
-  e1        =   1.0e-12               ! Error 1 tolerence (linear solver)
-  e2        =   1.0e-12               ! Error 2 tolerence (linear solver)
-  esoln     =   1.e-12                ! Error between soln in single timestep
-  nit       =   n*100                 ! Max number of iterations (lin. sol.)
+  pSize     =   512           ! Set number of grid lines
+  true2D    =   0             ! if 1 then prob is 2D, otherwise 3D  
+  depth     =   0.0390625     ! depth of innoculation site
+  height    =   0.10          ! height of innoculation site
+  alpha     =   4             ! exponent in D(M)
+  beta      =   4             ! exponent in D(M)
+  nu        =   0.1           ! Death rate 
+  kappa     =   0.01          ! Non-dim Half-Sat point
+  gama      =   1.5           ! Non-dim Yield rate 
+  delta     =   0.00000001    ! Non-dim Diffusion parameter
+  nOuts     =   20            ! Num. of solutions written to file
+  tEnd      =   40.           ! The time at which computations stop
+  tDel      =   0.01          ! Change in time
+  xDel      =   1/real(row)   ! Change in x
+  e1        =   1.0e-12       ! Error 1 tolerence (linear solver)
+  e2        =   1.0e-12       ! Error 2 tolerence (linear solver)
+  eSoln     =   1.0e-12       ! Error between soln in single timestep
+  nit       =   n*100         ! Max number of iterations (lin. sol.)
 !----------------------------------------------------------------------
 !   Function Selections
 !----------------------------------------------------------------------
-  fSelect   = 12
+  fSelect   = 1 
   dSelect   = 3
   gSelect   = 1
   MinitialCond = 3
@@ -49,21 +37,10 @@
 !   fSelect == 12-15 should be used with gSelect == 5 or 1
 !   otherwise gSelect == 1
 !----------------------------------------------------------------------
-!   (fSelect == 1)  f = mu*C/ (k + C) * (1 - (M*m0/(C*c0+eps))**gam)
-!   (fSelect == 2)  f = 1.
-!   (fSelect == 3)  f = (1. - M)
-!   (fSelect == 4)  f = (1. - C)*(C/(M+eps))
-!   (fSelect == 5)  f = mu*C/(k+C)*(1. - (M/(C+eps))**gam)
-!   (fSelect == 6)  f = mu*C/(k+C)*(1. - (M*(k+C)/(mu*C+eps))**gam) 
-!   (fSelect == 7)  f = mu/k*C*(1. - (M*k/(mu*C+eps))**gam)
-!   (fSelect == 8)  f = mu*C/(k*M+C)*(1. -(M*(k*M+C)/(mu*C+eps))**gam)
-!   (fSelect == 9)  f = mu*(C**gam - M**gam)* C**(1-gam)/(k+C)
-!   (fSelect == 10) f = mu*((C/(k+C))**gam - M**gam)*(C/(k+C))**(1-gam)
-!   (fSelect == 11) f = mu*(C**gam - M**gam)*C/(k+C)/k**gam
-!   (fSelect == 12) f = mu*C/(k+C)-nu
-!   (fSelect == 13) f = mu*C/(k+C)
-!   (fSelect == 14) f = mu*C/(k*M+C+eps)-nu
-!   (fSelect == 15) f = mu*C/(k*M+C+eps)
+!   (fSelect == 1) f = C/(k+C)-nu
+!   (fSelect == 2) f = C/(k+C)
+!   (fSelect == 3) f = C/(k*M+C+eps)-nu
+!   (fSelect == 4) f = C/(k*M+C+eps)
 !----------------------------------------------------------------------
   
 !----------------------------------------------------------------------
@@ -77,12 +54,7 @@
 !----------------------------------------------------------------------
 !   Function g(C,M)
 !----------------------------------------------------------------------
-! gSelect = 1 --> g = y*C/(k+C)
-! gSelect = 2 --> g = y*C/k
-! gSelect = 3 --> g = y*C/(k*M+C)
-! gSelect = 4 --> C_t is (r+s)*blahblahblah
-! gSelect = 5 --> C_t = -kC
-! gSelect = 6 --> C_t = -C/(k+C)*M/nu
+! gSelect = 1 --> g = gama*C/(kappa+C)
 !----------------------------------------------------------------------
 
 !----------------------------------------------------------------------
@@ -97,13 +69,13 @@
 ! j = 0
 ! b = height
 ! a = -b/(depth)**4
-! f = a*j*yDel + height
+! f = a*j*xDel + height
 ! do while(f > 0)
 !   do i = 1,col!col/5,col/5*2
 !     M(i+j*col) = f
 !   enddo
 !   j = j+1
-!   f = a*(j*yDel)**4 + height
+!   f = a*(j*xDel)**4 + height
 ! enddo
 !
 ! MinitialCond = 2:     (Homogenous Biomass)
@@ -114,13 +86,13 @@
 !------------------------------
 ! M = 0
 ! a = -height/(depth)**2
-! f = a*(j*yDel)**2 + height
-! jstop = INT(depth/yDel)+1
+! f = a*(j*xDel)**2 + height
+! jstop = INT(depth/xDel)+1
 ! !#omp parallel do private(f,x,y) shared(height,a) 
 ! do i = 1, n
 !   x = MOD(i, col)
 !   y = i / row
-!   f = a*yDel*yDel*(x*x + y*y) + height
+!   f = a*xDel*xDel*(x*x + y*y) + height
 !   M(i) = f
 !   if (M(i) .LE. 0) M(i) = 0
 ! enddo  
