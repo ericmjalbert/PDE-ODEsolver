@@ -583,12 +583,12 @@ cTime = 0
         M = Mnew
         countIters = countIters+1
 
-        if (countIters > 100) then
-          write(*,*) "[!] Over 100 iterations in one timestep"
+        if (countIters > 10000) then
+          write(*,*) "[!] Over 10000 iterations in one timestep"
           write(*,*) "[!] Solutions not converging. Exit!"
-          exit
+          STOP 
         end if
-!        write(*,*) countIters, diffC, diffM, C(12),M(12)
+       ! write(*,*) countIters, diffC, diffM, C(12),M(12)
     enddo
     if(countIters > maxIters) maxIters = countIters
     avgIters = avgIters + countIters
