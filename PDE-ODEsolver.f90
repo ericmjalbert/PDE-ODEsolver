@@ -113,7 +113,7 @@ program cThermoPDEODE
     write(*,*) "    height      = ", height
     write(*,*) "    alpha       = ", alpha
     write(*,*) "    beta        = ", beta
-    write(*,*) "    gama           = ", gama
+    write(*,*) "    gama        = ", gama
     write(*,*) "    nu          = ", nu
     write(*,*) "    delta       = ", delta
     write(*,*) "    nOuts       = ", nOuts
@@ -261,7 +261,7 @@ subroutine setInitialConditions(C,M,row,col,n,depth,height,xDel,MinitialCond)
     real,intent(in) :: depth, height, xDel
     real,dimension(n),intent(out) :: C,M
 
-    integer :: i,j,jstop,x,y
+    integer :: i,j,x,y
     real :: f,a       ! function for IC curve
     
     C = 1.; j = 0
@@ -269,14 +269,13 @@ subroutine setInitialConditions(C,M,row,col,n,depth,height,xDel,MinitialCond)
     if (MinitialCond == 1) then
         M = 0
         a = -height/(depth)**4
-        f = a*(j*xDel)**4 + height
-        jstop = INT(depth/xDel)+1
+        f = height
         !$omp parallel do private(f) shared(height,a) 
-        do j = 0, jstop
-            do i = 1,col
-                M(i+j*col) = f
-            enddo
-            f = a*(j*xDel)**4 + height
+        do i = 0,n
+          x = i / col 
+          f = a*(x*xDel)**4 + height
+          M(i) = f
+          if (M(i) .LE. 0) M(i) = 0
         enddo
         !$omp end parallel do
     else if (MinitialCond == 2) then
@@ -286,8 +285,6 @@ subroutine setInitialConditions(C,M,row,col,n,depth,height,xDel,MinitialCond)
     else if (MinitialCond == 3) then
         M = 0
         a = -height/(depth)**2
-        f = a*(j*xDel)**2 + height
-        jstop = INT(depth/xDel)+1
         !$omp parallel do private(f,x,y) shared(height,a) 
         do i = 1, n
           x = MOD(i, col)
