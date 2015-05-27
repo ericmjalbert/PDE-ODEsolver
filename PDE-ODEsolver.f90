@@ -65,8 +65,8 @@ program cThermoPDEODE
 
     ! Numerical Method Parameters
     integer :: pSize,row,col,n,ndiag,nit,nOuts
-    real :: tEnd,tDel,xDel,e1,e2,eSoln
-    integer :: true2D
+    real :: tEnd,tDel,xDel,e1,e2,eSoln,eTrav
+    integer :: true2D, checkTrav
 
     ! Solution variables
     real,dimension(:),allocatable  :: C, M
@@ -86,7 +86,7 @@ program cThermoPDEODE
     write(*,'(A, I5)') "     ndiag = ", ndiag
 
     write(*,*) "Getting problem size from file"
-    call getProbSize(pSize, true2D, filename, len(filename)) 
+    call getProbSize(pSize, true2D, checkTrav, filename, len(filename)) 
     if (true2D == 1) then 
       write(*,*) "    Problem is 2D"
       col = 4
@@ -103,7 +103,7 @@ program cThermoPDEODE
 
     write(*,*) "Opening Parameter file"
     call paramSet(depth, height,alpha, beta, kappa, &
-                  gama, nu, delta, nOuts, tEnd, tDel, e1, e2, & 
+                  gama, nu, delta, nOuts, tEnd, tDel, e1, e2, eTrav, &
                   eSoln, fSelect, dSelect, gSelect, MinitialCond, filename, &
                   len(filename))
     xDel = 1/real(row)
@@ -147,7 +147,7 @@ program cThermoPDEODE
     call system_clock(startTime)
     call solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,xDel,&
        gama,nu,alpha,beta,kappa,delta,ndiag,e1,e2,nit,eSoln,dSelect,&
-       fSelect,gSelect,avgIters,maxIters,avgNit,maxNit,true2D)
+       fSelect,gSelect,avgIters,maxIters,avgNit,maxNit,true2D,checkTrav,eTrav)
     call system_clock(endTime)
    
     ! Convert times into seconds
@@ -173,14 +173,19 @@ end program
 
 
 !==============================================================================
-!   Sets the problem size and number of diagonal elements
+!   Sets the problem size and checks for auxillary settings
 !-----------------------------------------------------------------------------
 !     This must be done first since the problem size is used in the variable 
 !   declaration of the arrays.
+!     The auxillary settings are if the problem is 2D in nature; this means 
+!   that the computation time can be drastically reduced by letting col = 4
+!   instead of col = pSize.
+!     Also, the option for checking for the existance of travelling wave
+!   solutions is done here.
 !==============================================================================
-subroutine getProbSize(pSize, true2D, filename, nameLen) 
+subroutine getProbSize(pSize, true2D, checkTrav, filename, nameLen) 
     implicit none
-    integer,intent(out) :: pSize, true2D
+    integer,intent(out) :: pSize, true2D, checkTrav
     integer,intent(in)  :: nameLen
     character(nameLen),intent(in) :: filename
     character :: dum   ! Dummy variable
@@ -189,6 +194,7 @@ subroutine getProbSize(pSize, true2D, filename, nameLen)
     read(19,*); read(19,*); read(19,*)  ! Skip first 3 lines
     read(19,*) dum, dum, pSize
     read(19,*) dum, dum, true2D
+    read(19,*) dum, dum, checkTrav
     close(19)
 end subroutine getprobSize
 
@@ -202,12 +208,12 @@ end subroutine getprobSize
 !   value.
 !==============================================================================
 subroutine paramSet(depth, height, alpha, beta,  &
-                    kappa, gama, nu, delta, nOuts, tEnd, tDel, e1, e2,&
+                    kappa, gama, nu, delta, nOuts, tEnd, tDel, e1, e2, eTrav, &
                     eSoln, fSelect, dSelect, gSelect, MinitialCond, filename, &
                     nameLen)
     implicit none
     real, intent(out) :: depth, height, kappa, delta, nu 
-    real, intent(out) :: tEnd, tDel, e1, e2, eSoln, gama
+    real, intent(out) :: tEnd, tDel, e1, e2, eSoln, eTrav, gama
     integer, intent(out) :: alpha, beta, nOuts
     integer, intent(out) :: fSelect, dSelect, gSelect, MinitialCond
     integer, intent(in) :: nameLen
@@ -217,7 +223,7 @@ subroutine paramSet(depth, height, alpha, beta,  &
     
     open(UNIT = 19, FILE = filename, STATUS = "old", ACTION = "read")
     ! Skip first 5 lines
-    read(19,*); read(19,*); read(19,*); read(19,*); read(19,*)  
+    read(19,*); read(19,*); read(19,*); read(19,*); read(19,*); read(19,*)
 
     read(19,*) dum, dum2, depth
     read(19,*) dum, dum2, height
@@ -234,6 +240,7 @@ subroutine paramSet(depth, height, alpha, beta,  &
     read(19,*) dum, dum2, e1
     read(19,*) dum, dum2, e2
     read(19,*) dum, dum2, eSoln
+    read(19,*) dum, dum2, eTrav
     read(19,*)                          ! Skip nit
     read(19,*); read(19,*); read(19,*)  ! Skip 3 lines
     read(19,*) dum, dum2, fSelect
@@ -457,12 +464,12 @@ end subroutine GenMatrixM
 !==============================================================================
 subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,xDel,&
     gama,nu,alpha,beta,kappa,delta,ndiag,e1,e2,nit,eSoln,dSelect,fSelect,&
-    gSelect,avgIters,maxIters,avgNit,maxNit,true2D)
+    gSelect,avgIters,maxIters,avgNit,maxNit,true2D,checkTrav,eTrav)
   implicit none
   integer,intent(in) :: nOuts,n,row,col,alpha,beta,ndiag
-  integer,intent(in) :: dSelect,fSelect,gSelect,true2D
+  integer,intent(in) :: dSelect,fSelect,gSelect,true2D,checkTrav
   real,intent(in) :: tEnd,tDel,xDel,kappa,delta,nu,gama
-  real,intent(in) :: eSoln
+  real,intent(in) :: eSoln,eTrav
   real,intent(inout) :: e1,e2
   integer,intent(inout) :: nit
   real,dimension(n),intent(out) :: M,C
@@ -488,7 +495,10 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,xDel,&
   real :: diffC, diffM 
   integer :: countIters 
   real :: peak, height, intfac  ! Track Interface and wave peak
-  
+  integer :: travExist          ! 1 if trav wave exist at this timestep
+  real :: waveSpeed             ! calculated wavespeed at current timestpe
+  real,dimension(n) :: Mprev_10 ! M from 10-ish timesteps ago, for travCheck
+
   stored_e1 = e1
   stored_e2 = e2 
  
@@ -498,7 +508,8 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,xDel,&
   countIters = 0
   avgIters = 1 
   avgNit = 1 
-  
+  Mprev_10 = M  ! To initiatize for travCheck
+  travExist = 0
   open(UNIT = 124, IOSTAT = stat, FILE = "total.dat", STATUS = "old")
   if (stat .EQ. 0) close(124, STATUS = "delete")
   open(UNIT = 120, FILE = "total.dat", POSITION = "append", ACTION = "write")
@@ -507,8 +518,14 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,xDel,&
     open(UNIT = 124, IOSTAT = stat, FILE = "peakInfo.dat", STATUS = "old")
     if (stat .EQ. 0) close(124, STATUS = "delete")
     open(UNIT = 121, FILE = "peakInfo.dat", POSITION = "append", ACTION = "write")
-  end if    
+  endif    
 
+  if (checkTrav == 1) then
+    open(UNIT = 124, IOSTAT = stat, FILE = "travCheck.dat", STATUS = "old")
+    if (stat .EQ. 0) close(124, STATUS = "delete")
+    open(UNIT = 138, FILE = "travCheck.dat", POSITION = "append", ACTION = "write")
+  endif
+  
   write(*,*) "   time    avgIter  maxIter      avgNit  maxNit        avgM        avgC"
 
   do while(counter * tDel <= tEnd)
@@ -521,6 +538,12 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,xDel,&
         call calcPeakInterface(M, row, col, peak, height, intfac)
         write (121,*) tDel*counter, peak, height, intfac
       end if
+      if (checkTrav == 1) then
+        call checkTravWave(M, Mprev_10, row, col, travExist, wavespeed, height, eTrav)
+        write (138,*) tDel*counter, travExist, wavespeed
+        write (*,*) tDel*counter, travExist, wavespeed
+        Mprev_10 = M
+      endif
     endif 
   
     ! Write to file / report Total Mass
@@ -828,6 +851,63 @@ subroutine calcPeakInterface(M, row, col, peak, height, intfac)
     height = hei
 
 end subroutine 
+
+
+
+!=======================================================================
+!   Check if there is evidence of a travelling wave solution
+!----------------------------------------------------------------------
+!   Makes an educated guess for the wavespeed (which would be incorrect
+!   by, at worst, 2*eTrav) and then uses this wavespeed to check if the
+!   difference between M and Mprev is consistently wavespeed +- eTrav
+!     Reports 1 or 0 for travExists based on if traveilling exists (1)
+!   or not (0). Also reports the approximated wavespeed.
+!=======================================================================
+subroutine checkTravWave(M, Mprev, row, col, travExist, wavespeed, height, eTrav)
+  implicit none
+  integer, intent(in) :: row, col
+  real, intent(in) :: height, eTrav
+  real, dimension(row * col), intent(in) :: M, Mprev
+  
+  integer, intent(out) :: travExist
+  real, intent(out) :: wavespeed
+
+  integer :: i, wavePoint1, wavePoint2
+  wavePoint1 = -1 
+  wavePoint2 = -1 
+
+  do, i=1,row
+    ! -3 because each column is 4 and I want to start at 1
+    if (M(i*col-3) > 0.09 - eTrav .AND. M(i*col-3) < 0.09 + eTrav) then
+      wavePoint1 = i 
+      exit
+    endif
+  enddo
+
+  do, i=1,row
+    if (Mprev(i*col-3) >0.09 - eTrav .AND. Mprev(i*col-3) < 0.09 + eTrav) then
+      wavePoint2 = i
+      exit
+    endif
+  enddo
+
+  write(*,*) wavePoint1, wavePoint2
+
+
+  ! Here the wavespeed is in 'i' units
+  wavespeed = abs(wavePoint1 - wavePoint2)    
+  
+  do, i=2,row-1
+    if (M(i*col-3) - M( (i+int(wavespeed))*col-3 ) > eTrav) then
+      travExist = 0 
+    endif
+  enddo
+
+  ! Here wavespeed is converted to dimensionless units....
+  wavespeed = wavespeed / row       
+
+end subroutine
+
 
 
 !==============================================================================
