@@ -3,7 +3,7 @@ TEMP=$1
 TEMP2=`echo $TEMP | cut -d '.' -f 1` # Takes off the '.txt'
 DIRNAME=${TEMP2}ParalOutput  
 
-gfortran -O3 -fopenmp -fdefault-real-8 PDE-ODEsolver.f90 CGdiag.f90
+gfortran -O3 -fopenmp -fdefault-real-8 PDE-ODEsolver.f90 CGdiag.f90 init_random_seed.f90
 echo $1 | ./a.out
 
 ./seperateOutput2D.py

@@ -1,17 +1,18 @@
 !----------------------------------------------------------------------
 ! Parameters
 !----------------------------------------------------------------------
-  pSize     =   255           ! Set number of grid lines
-  true2D    =   1             ! if 1 then prob is 2D, otherwise 3D  
+  pSize     =   256           ! Set number of grid lines
+  true2D    =   0             ! if 1 then prob is 2D, otherwise 3D  
   depth     =   0.0390625     ! depth of innoculation site
   height    =   0.10          ! height of innoculation site
+  innocPts  =   4             ! number of innoculation points for IC
   alpha     =   4             ! exponent in D(M)
   beta      =   4             ! exponent in D(M)
   nu        =   0.1           ! Death rate 
   kappa     =   0.01          ! Non-dim Half-Sat point
   gama      =   0.81          ! Non-dim Yield rate 
   delta     =   0.00000001    ! Non-dim Diffusion parameter
-  nOuts     =   20            ! Num. of solutions written to file
+  nOuts     =   10            ! Num. of solutions written to file
   tEnd      =   40.          ! The time at which computations stop
   tDel      =   0.01          ! Change in time
   xDel      =   1/real(row)   ! Change in x
@@ -25,7 +26,7 @@
   fSelect   = 1 
   dSelect   = 3
   gSelect   = 1
-  MinitialCond = 1
+  MinitialCond = 4
 
 =======================================================================
 =======================================================================
@@ -96,7 +97,10 @@
 !   M(i) = f
 !   if (M(i) .LE. 0) M(i) = 0
 ! enddo  
-!     
+!    
+! MinitialCond = 4:    (Random innoclation points over whole domain) 
+!
+! MinitialCOnd = 5:    (Random innoculation points on y=0 side)
 !----------------------------------------------------------------------
 
 

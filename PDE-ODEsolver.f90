@@ -1,4 +1,4 @@
-!==============================================================================
+!=============================================================================
 !   PDE - ODE Coupled Solver
 !-----------------------------------------------------------------------------
 !     This fortran code solves the PDE - ODE coupled system that describes 
@@ -58,10 +58,11 @@ program cThermoPDEODE
     character(100) :: filename
 
     ! Problem Parameters
-    real :: depth,height
     real :: kappa,delta,nu,gama
     integer :: alpha,beta
+    real :: depth,height
     integer :: fSelect, dSelect, gSelect, MinitialCond
+    integer :: num_innocu_points
 
     ! Numerical Method Parameters
     integer :: pSize,row,col,n,ndiag,nit,nOuts
@@ -102,7 +103,7 @@ program cThermoPDEODE
     write(*,*) "    n     = ", n
 
     write(*,*) "Opening Parameter file"
-    call paramSet(depth, height,alpha, beta, kappa, &
+    call paramSet(depth, height, num_innocu_points, alpha, beta, kappa, &
                   gama, nu, delta, nOuts, tEnd, tDel, e1, e2, & 
                   eSoln, fSelect, dSelect, gSelect, MinitialCond, filename, &
                   len(filename))
@@ -132,7 +133,8 @@ program cThermoPDEODE
     write(*,'(A,I12,A)') "    C and M are now dimension(", n, ") arrays"
 
     write(*,*) "Setting Initial Conditions"
-    call setInitialConditions(C,M,row,col,n,depth,height,xDel,MinitialCond)
+    call setInitialConditions(C,M,row,col,n,depth,height,xDel,MinitialCond, &
+                              num_innocu_points)
         write(*,*) "    C = 1"
         if (MinitialCond == 1) then
             write(*,*) "    M has non-homogenous Initial Conditions"
@@ -201,14 +203,14 @@ end subroutine getprobSize
 !     Takes in all the parameters on entry and outputs them with the appropriate
 !   value.
 !==============================================================================
-subroutine paramSet(depth, height, alpha, beta,  &
+subroutine paramSet(depth, height, numInnocu, alpha, beta,  &
                     kappa, gama, nu, delta, nOuts, tEnd, tDel, e1, e2,&
                     eSoln, fSelect, dSelect, gSelect, MinitialCond, filename, &
                     nameLen)
     implicit none
     real, intent(out) :: depth, height, kappa, delta, nu 
     real, intent(out) :: tEnd, tDel, e1, e2, eSoln, gama
-    integer, intent(out) :: alpha, beta, nOuts
+    integer, intent(out) :: alpha, beta,  numInnocu, nOuts
     integer, intent(out) :: fSelect, dSelect, gSelect, MinitialCond
     integer, intent(in) :: nameLen
     character(nameLen), intent(in) :: filename
@@ -221,6 +223,7 @@ subroutine paramSet(depth, height, alpha, beta,  &
 
     read(19,*) dum, dum2, depth
     read(19,*) dum, dum2, height
+    read(19,*) dum, dum2, numInnocu
     read(19,*) dum, dum2, alpha
     read(19,*) dum, dum2, beta
     read(19,*) dum, dum2, nu
@@ -255,14 +258,16 @@ end subroutine paramSet
 !     this function is computed based on the depth and height parameters, 
 !     calculating b = height and a = b/(depth)^8
 !==============================================================================
-subroutine setInitialConditions(C,M,row,col,n,depth,height,xDel,MinitialCond)
+subroutine setInitialConditions(C,M,row,col,n,depth,height,xDel,MinitialCond, &
+                                num_innocu_points)
     implicit none
-    integer,intent(in) :: row,col,n,MinitialCond
+    integer,intent(in) :: row,col,n,MinitialCond, num_innocu_points
     real,intent(in) :: depth, height, xDel
     real,dimension(n),intent(out) :: C,M
 
-    integer :: i,j,x,y
+    integer :: i,j,x,y, xi, yi
     real :: f,a       ! function for IC curve
+    real :: xr, yr
     
     C = 1.; j = 0
 
@@ -295,7 +300,43 @@ subroutine setInitialConditions(C,M,row,col,n,depth,height,xDel,MinitialCond)
         enddo
         !$omp end parallel do
 
+    else if (MinitialCond == 4) then
+      M = 0
+      a = -height/(depth*depth*num_innocu_points)
+      call init_random_seed()
+      do i = 1, num_innocu_points
+        call random_number(xr)
+        call random_number(yr)
+        do j = 1, n
+          if (M(j) .LE. 0) then
+            x = MOD(j, col)
+            y = j / row
+            M(j) = a*((x*xDel-xr)*(x*xDel-xr) + (y*xDel-yr)*(y*xDel-yr)) + height/num_innocu_points
+            if (M(j) .LE. 0) M(j) = 0
+          endif
+        enddo
+
+        ! in here, maybe try adding a +- random number thing to give some difference to each innoculation points
+        ! Makeing sure to add some sort of tally so that the total initial biomass is always a constant (pi/2*d^2*h)
+      enddo 
+        
+    else if (MinitialCond == 5) then
+      M = 0
+      a = -height/(depth*depth*num_innocu_points)
+      call init_random_seed()
+      do i = 1, num_innocu_points
+        call random_number(xr)
+        do j = 1, n
+          if (M(j) .LE. 0) then
+            x = MOD(j, col)
+            y = j / row
+            M(j) = a*((x*xDel-xr)*(x*xDel-xr) + (y*xDel)*(y*xDel)) + height/num_innocu_points
+            if (M(j) .LE. 0) M(j) = 0
+          endif
+        enddo
+      enddo
     endif
+
 end subroutine setInitialConditions
 
 
