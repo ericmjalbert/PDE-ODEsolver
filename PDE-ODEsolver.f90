@@ -517,6 +517,7 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,xDel,&
  
   real :: totalMassM        ! Total Biomass over region
   real :: totalMassC        ! Total Substrait over region
+  real :: prevMassC         ! Total Substrait from X timesteps ago
  
   real,dimension(n) :: Mnew
   real,dimension(n) :: Cnew
@@ -540,9 +541,15 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,xDel,&
   avgIters = 1 
   avgNit = 1 
   
+  prevMassC = 1
+
   open(UNIT = 124, IOSTAT = stat, FILE = "total.dat", STATUS = "old")
   if (stat .EQ. 0) close(124, STATUS = "delete")
   open(UNIT = 120, FILE = "total.dat", POSITION = "append", ACTION = "write")
+
+  open(UNIT = 124, IOSTAT = stat, FILE = "COprod.dat", STATUS = "old")
+  if (stat .EQ. 0) close(124, STATUS = "delete")
+  open(UNIT = 126, FILE = "COprod.dat", POSITION = "append", ACTION = "write")
   
   if (true2D == 1) then
     open(UNIT = 124, IOSTAT = stat, FILE = "peakInfo.dat", STATUS = "old")
@@ -555,9 +562,16 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,xDel,&
   do while(counter * tDel <= tEnd)
     ! Output every 100 times more then nOuts for the peak info
     if (MOD(counter, int(filter/100+1)) == 0) then
+      ! Get total M and C
       call calcMass(M,totalMassM,n,row,col)
       call calcMass(C,totalMassC,n,row,col)
       write(120,*) counter*tDel, totalMassM, totalMassC
+
+      ! CO_2 production: t, current produced CO2, total produced CO2
+      write(126,*) counter*tDel, prevMassC - totalMassC, 1 - totalMassC
+      prevMassC = totalMassC
+
+      ! peak-interface, only availbale for 2D graphs
       if (true2D == 1) then
         call calcPeakInterface(M, row, col, peak, height, intfac)
         write (121,*) tDel*counter, peak, height, intfac
@@ -601,6 +615,9 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,xDel,&
         ! Solve C
         call solveC(Mprev,Mnew,Cprev,Cnew,n,kappa,gama,tDel,gSelect)
 
+        ! Solve CO_2 production
+        
+
         if(nit > maxNit) maxNit = nit
         avgNit = avgNit + nit
 
@@ -634,7 +651,10 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,xDel,&
   end if
 
   close(120)
-  close(121)
+  close(126)
+  if (true2D == 1) then
+    close(121)
+  endif
   
 end subroutine solveOrder2
 

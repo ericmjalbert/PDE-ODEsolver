@@ -1,8 +1,8 @@
 !----------------------------------------------------------------------
 ! Parameters
 !----------------------------------------------------------------------
-  pSize     =   256           ! Set number of grid lines
-  true2D    =   0             ! if 1 then prob is 2D, otherwise 3D  
+  pSize     =   128           ! Set number of grid lines
+  true2D    =   1             ! if 1 then prob is 2D, otherwise 3D  
   depth     =   0.0390625     ! depth of innoculation site
   height    =   0.10          ! height of innoculation site
   innocPts  =   4             ! number of innoculation points for IC
@@ -11,9 +11,9 @@
   nu        =   0.1           ! Death rate 
   kappa     =   0.01          ! Non-dim Half-Sat point
   gama      =   0.81          ! Non-dim Yield rate 
-  delta     =   0.00000001    ! Non-dim Diffusion parameter
+  delta     =   0.000001    ! Non-dim Diffusion parameter
   nOuts     =   10            ! Num. of solutions written to file
-  tEnd      =   40.          ! The time at which computations stop
+  tEnd      =   30.          ! The time at which computations stop
   tDel      =   0.01          ! Change in time
   xDel      =   1/real(row)   ! Change in x
   e1        =   1.0e-12       ! Error 1 tolerence (linear solver)
@@ -26,7 +26,7 @@
   fSelect   = 1 
   dSelect   = 3
   gSelect   = 1
-  MinitialCond = 4
+  MinitialCond = 1
 
 =======================================================================
 =======================================================================

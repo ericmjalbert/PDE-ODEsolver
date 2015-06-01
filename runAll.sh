@@ -17,6 +17,7 @@ mv total.dat $DIRNAME/
 mv statReport.dat $DIRNAME/
 cp $1 $DIRNAME/
 mv output.dat ./$DIRNAME/out.dat
+mv COprod.dat ./$DIRNAME/
 
 find *.dat | wc > temp    # Counts files, lines, and words from input (the pipe "|")
 
