@@ -271,18 +271,21 @@ subroutine setInitialConditions(C,M,row,col,n,depth,height,xDel,MinitialCond, &
     
     C = 1.; j = 0
 
+    !!!!!!!!!!!!! CHECK IF THIS ACTUQALLY WORKS
     if (MinitialCond == 1) then
         M = 0
         a = -height/(depth)**4
         f = height
         !$omp parallel do private(f) shared(height,a) 
-        do i = 0,n
-          x = i / col 
+        do i = 1,n
+          x = MOD(i ,col)
+          y = i / row
           f = a*(x*xDel)**4 + height
           M(i) = f
           if (M(i) .LE. 0) M(i) = 0
         enddo
         !$omp end parallel do
+
     else if (MinitialCond == 2) then
         M = height
 
@@ -628,10 +631,10 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,xDel,&
         M = Mnew
         countIters = countIters+1
 
-        if (countIters > 100) then
+        if (countIters > 1000) then
           write(*,*) "[!] Over 100 iterations in one timestep"
           write(*,*) "[!] Solutions not converging. Exit!"
-          exit
+          stop
         end if
 !        write(*,*) countIters, diffC, diffM, C(12),M(12)
     enddo
@@ -712,6 +715,7 @@ subroutine printToFile(n,row,col,M,C)
     integer :: p
     integer :: i,j
     integer :: stat
+    integer :: filter
   
     !-------------------------------------------
     ! Deletes the old output file if it exist
@@ -721,11 +725,17 @@ subroutine printToFile(n,row,col,M,C)
 
     open(UNIT = 11, FILE = "output.dat", POSITION = "append", ACTION = "write")
 
-    do, i=1,row
-        do, j=1,col
+    if (row .ge. 257) then
+      filter = (row-1)/256
+    endif
+
+    do i=1,row
+        do j=1,col
             p = (j + (i-1)*col)
-            write(11,*) real(j-1)/real(col-1), &
-                        real(i-1)/real(row-1), M(p), C(p)
+      !      if (MOD(i, filter) == 0 .AND. MOD(j, filter) == 0) then
+              write(11,*) real(j-1)/real(col-1), &
+                          real(i-1)/real(row-1), M(p), C(p)
+      !      endif
         enddo
         write(11,*) ' '
     enddo
@@ -740,8 +750,7 @@ end subroutine printToFile
 !     Wave Example.
 !-----------------------------------------------------------------------------
 !   Runs through the grid, row-by-row. The MOD and filter act to reduce the 
-!     number of grid points written, useful when comparing different grid 
-!     sizes.
+!     number of grid points written
 !   Unique here is that the average of the x-axis is taken so that the system 
 !     can be reduced to just y. Also written are the max and min for each y 
 !     value; this is used for showing that the system can be reduced.

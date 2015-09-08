@@ -1,24 +1,24 @@
 !----------------------------------------------------------------------
 ! Parameters
 !----------------------------------------------------------------------
-  pSize     =   128           ! Set number of grid lines
-  true2D    =   1             ! if 1 then prob is 2D, otherwise 3D  
+pSize = 257 
+  true2D    =   0             ! if 1 then prob is 2D, otherwise 3D  
   depth     =   0.0390625     ! depth of innoculation site
   height    =   0.10          ! height of innoculation site
   innocPts  =   4             ! number of innoculation points for IC
   alpha     =   4             ! exponent in D(M)
   beta      =   4             ! exponent in D(M)
-  nu        =   0.1           ! Death rate 
+  nu        =   0.3           ! Death rate 
   kappa     =   0.01          ! Non-dim Half-Sat point
-  gama      =   0.81          ! Non-dim Yield rate 
-  delta     =   0.000001    ! Non-dim Diffusion parameter
+  gama      =   0.75          ! Non-dim Yield rate 
+  delta     =   0.00001    ! Non-dim Diffusion parameter
   nOuts     =   10            ! Num. of solutions written to file
-  tEnd      =   30.          ! The time at which computations stop
-  tDel      =   0.01          ! Change in time
+  tEnd      =   10          ! The time at which computations stop
+  tDel      =   0.2          ! Change in time
   xDel      =   1/real(row)   ! Change in x
   e1        =   1.0e-12       ! Error 1 tolerence (linear solver)
   e2        =   1.0e-12       ! Error 2 tolerence (linear solver)
-  eSoln     =   1.0e-12       ! Error between soln in single timestep
+  eSoln     =   0.00000001  ! 1.0e-12       ! Error between soln in single timestep
   nit       =   n*100         ! Max number of iterations (lin. sol.)
 !----------------------------------------------------------------------
 !   Function Selections
@@ -26,7 +26,7 @@
   fSelect   = 1 
   dSelect   = 3
   gSelect   = 1
-  MinitialCond = 1
+  MinitialCond = 3
 
 =======================================================================
 =======================================================================
@@ -64,7 +64,7 @@
 ! Substrait Concentration
 !  C = 1.
 ! 
-! MinitialCond = 1:     (Non-homogenous Biomass)
+! MinitialCond = 1:     (Non-homogenous Biomass [2D])
 !------------------------------
 ! M = 0
 ! j = 0
@@ -98,9 +98,9 @@
 !   if (M(i) .LE. 0) M(i) = 0
 ! enddo  
 !    
-! MinitialCond = 4:    (Random innoclation points over whole domain) 
+! MinitialCond = 4:    (Random innoclation points over whole domain [3D])
 !
-! MinitialCOnd = 5:    (Random innoculation points on y=0 side)
+! MinitialCOnd = 5:    (Random innoculation points on y=0 side [3D])
 !----------------------------------------------------------------------
 
 
