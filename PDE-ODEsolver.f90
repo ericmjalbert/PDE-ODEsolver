@@ -338,7 +338,26 @@ subroutine setInitialConditions(C,M,row,col,n,depth,height,xDel,MinitialCond, &
           endif
         enddo
       enddo
+
+    ! sharp IC. homogenous in y-dir
+    else if (MinitialCond == 6) then
+      do i = 1, n
+        if ( i*xDel/col .LE. depth) then
+          M(i) = height
+        endif
+      enddo 
+
+    ! pertubations in y-dir; check trav.wave. stability
+    else if (MinitialCond == 7) then
+      call init_random_seed()
+      do i = 1, n
+        if ( i*xDel/col .LE. depth) then
+          call random_number(xr)
+          M(i) = height + xr*0.05-0.025
+        endif
+      enddo
     endif
+  
 
 end subroutine setInitialConditions
 
@@ -357,6 +376,7 @@ subroutine fFunc(M,C,f,kappa,nu,fSelect)
     if (fSelect == 2) f = C/(kappa+C)
     if (fSelect == 3) f = C/(kappa*M+C+eps)-nu
     if (fSelect == 4) f = C/(kappa*M+C+eps)
+    if (fSelect == 5) f = 1
 end subroutine fFunc
 
 
@@ -541,8 +561,8 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,xDel,&
   endLoop = 0
   counter = 0
   countIters = 0
-  avgIters = 1 
-  avgNit = 1 
+  avgIters = 0 
+  avgNit = 0 
   
   prevMassC = 1
 
@@ -562,7 +582,7 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,xDel,&
 
   write(*,*) "   time    avgIter  maxIter      avgNit  maxNit        avgM        avgC"
 
-  do while(counter * tDel <= tEnd)
+  do while((counter-1) * tDel <= tEnd)
     ! Output every 100 times more then nOuts for the peak info
     if (MOD(counter, int(filter/100+1)) == 0) then
       ! Get total M and C
