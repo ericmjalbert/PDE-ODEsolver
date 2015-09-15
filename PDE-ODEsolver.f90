@@ -1,5 +1,6 @@
 !=============================================================================
 !   PDE - ODE Coupled Solver
+
 !-----------------------------------------------------------------------------
 !     This fortran code solves the PDE - ODE coupled system that describes 
 !   the growth of Clostridium Thermocellum and its consumption of the carbon
@@ -97,7 +98,7 @@ program cThermoPDEODE
     end if
     write(*,*) "    pSize = ", pSize
     row = pSize
-    n = pSize * col
+    n = row * col
     write(*,*) "    row   = ", row
     write(*,*) "    col   = ", col        
     write(*,*) "    n     = ", n
@@ -265,33 +266,30 @@ subroutine setInitialConditions(C,M,row,col,n,depth,height,xDel,MinitialCond, &
     real,intent(in) :: depth, height, xDel
     real,dimension(n),intent(out) :: C,M
 
-    integer :: i,j,x,y, xi, yi
+    integer :: i,j,x,y, xi, yi, p
     real :: f,a       ! function for IC curve
     real :: xr, yr
     
-    C = 1.; j = 0
+    C = 1.; j = 0; M = 0
 
-    !!!!!!!!!!!!! CHECK IF THIS ACTUQALLY WORKS
+    ! 2D trav wave smooth curve
     if (MinitialCond == 1) then
-        M = 0
         a = -height/(depth)**4
-        f = height
         !$omp parallel do private(f) shared(height,a) 
-        do i = 1,n
-          x = MOD(i ,col)
-          y = i / row
+        do i = 1, n
+          x = (i-1)/col
           f = a*(x*xDel)**4 + height
           M(i) = f
-          if (M(i) .LE. 0) M(i) = 0
-        enddo
+          if (f .LE. 0) M(i) = 0
+        enddo 
         !$omp end parallel do
 
+    ! homogenous everywhere
     else if (MinitialCond == 2) then
         M = height
 
     ! 3D initial conditions
     else if (MinitialCond == 3) then
-        M = 0
         a = -height/(depth)**2
         !$omp parallel do private(f,x,y) shared(height,a) 
         do i = 1, n
@@ -304,7 +302,6 @@ subroutine setInitialConditions(C,M,row,col,n,depth,height,xDel,MinitialCond, &
         !$omp end parallel do
 
     else if (MinitialCond == 4) then
-      M = 0
       a = -height/(depth*depth*num_innocu_points)
       call init_random_seed()
       do i = 1, num_innocu_points
@@ -324,7 +321,6 @@ subroutine setInitialConditions(C,M,row,col,n,depth,height,xDel,MinitialCond, &
       enddo 
         
     else if (MinitialCond == 5) then
-      M = 0
       a = -height/(depth*depth*num_innocu_points)
       call init_random_seed()
       do i = 1, num_innocu_points
@@ -342,7 +338,8 @@ subroutine setInitialConditions(C,M,row,col,n,depth,height,xDel,MinitialCond, &
     ! sharp IC. homogenous in y-dir
     else if (MinitialCond == 6) then
       do i = 1, n
-        if ( i*xDel/col .LE. depth) then
+        x = (i-1) / col
+        if ( x*xDel .LE. depth) then
           M(i) = height
         endif
       enddo 
@@ -353,9 +350,24 @@ subroutine setInitialConditions(C,M,row,col,n,depth,height,xDel,MinitialCond, &
       do i = 1, n
         if ( i*xDel/col .LE. depth) then
           call random_number(xr)
-          M(i) = height + xr*0.05-0.025
+          M(i) = xr*0.2
         endif
       enddo
+
+    ! Test the grid ordering/ printing
+    else if (MinitialCond == 8) then
+     ! do i = 1, row
+     !   do j = 1, col
+     !     if (i*xDel .LE. depth) then
+     !       p = j + (i-1)*col
+     !       M(i) = real(p)/real(n)/4.0
+     !     endif
+     !   enddo
+     ! enddo
+     do i = 1, n
+       M(i) = real(i)/real(n)/4.0
+       if (M(i) .GE. 0.1) M(i) = 0
+     enddo
     endif
   
 
@@ -582,7 +594,7 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,xDel,&
 
   write(*,*) "   time    avgIter  maxIter      avgNit  maxNit        avgM        avgC"
 
-  do while((counter-1) * tDel <= tEnd)
+  do while((counter) * tDel <= tEnd)
     ! Output every 100 times more then nOuts for the peak info
     if (MOD(counter, int(filter/100+1)) == 0) then
       ! Get total M and C
@@ -672,6 +684,9 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,xDel,&
   else
     call printToFile(n,row,col,M,C)
   end if
+  write(*,'(F8.2,F12.2,I8,F12.2,I8,F12.6,F12.6)') tDel*counter, &
+          real(avgIters), int(maxIters), real(avgNit), &
+          int(maxNit),totalMassM, totalMassC
 
   close(120)
   close(126)
@@ -745,19 +760,22 @@ subroutine printToFile(n,row,col,M,C)
 
     open(UNIT = 11, FILE = "output.dat", POSITION = "append", ACTION = "write")
 
-    if (row .ge. 257) then
+    filter = 1
+    if (row .gt. 257) then
       filter = (row-1)/256
     endif
 
     do i=1,row
+      if (MOD(i-1, filter) == 0) then
         do j=1,col
+          if (MOD(j-1, filter) == 0) then
             p = (j + (i-1)*col)
-      !      if (MOD(i, filter) == 0 .AND. MOD(j, filter) == 0) then
-              write(11,*) real(j-1)/real(col-1), &
-                          real(i-1)/real(row-1), M(p), C(p)
-      !      endif
+            write(11,*) real(j-1)/real(col-1), &
+                        real(i-1)/real(row-1), M(p), C(p)
+          endif
         enddo
         write(11,*) ' '
+      endif
     enddo
     write(11,*) 
     
@@ -785,65 +803,65 @@ end subroutine printToFile
 !     none
 !==============================================================================
 subroutine printToFile2D(n,row,col,M,C)
-    implicit none
+   implicit none
 
-    integer,intent(in) :: n, row, col
-    real,dimension(n),intent(in) :: M,C
+   integer,intent(in) :: n, row, col
+   real,dimension(n),intent(in) :: M,C
 
-    integer :: p
-    integer :: i,j
-    integer :: stat
-    real :: averageM, averageC
-    real :: maxM, minM, maxC, minC
-    real :: y
+   integer :: p
+   integer :: i,j
+   integer :: stat
+   integer :: filter
+   real :: averageM, averageC
+   real :: maxM, minM, maxC, minC
+   real :: y
   
-    !-------------------------------------------
-    ! Deletes the old output file if it exist
-    !-------------------------------------------
-    open(UNIT = 124, IOSTAT = stat, FILE = "2D_output.dat", STATUS = "old")
-    if (stat .EQ. 0) close(124, STATUS = "delete")
+   !-------------------------------------------
+   ! Deletes the old output file if it exist
+   !-------------------------------------------
+   open(UNIT = 124, IOSTAT = stat, FILE = "2D_output.dat", STATUS = "old")
+   if (stat .EQ. 0) close(124, STATUS = "delete")
 
-    open(UNIT = 12, FILE = "2D_output.dat", POSITION = "append", ACTION = "write")
-    
-    do, i=0,row
-        averageM = 0
-        averageC = 0
-        maxM = 0
-        maxC = 0
-        minM = 1
-        minC = 1
-        do, j=0,col
-            if (i == 0 .and. j == 0) then
-                p = 1
-            else if (i == 0) then
-                p = j
-            else if (j == 0) then
-                p = 1 + (i-1)*col
-            else
-                p = j + (i-1)*col
-            endif
-            averageM = averageM + M(p)
-            averageC = averageC + C(p)
-            if(M(p) .ge. maxM) then 
-                maxM = M(p)
-            endif
-            if(M(p) .le. minM) then 
-                minM = M(p)
-            endif
-            if(C(p) .ge. maxC) then
-                maxC = C(p)
-            endif
-            if(C(p) .le. minC) then
-                minC = C(p)
-            endif
-        enddo
-        averageM = averageM/(col+1)
-        averageC = averageC/(col+1)
-        y = real(i)/real(row)
-        write(12,'(f20.12,f20.12,f20.12)') y,averageM,averageC
-!write(12,'(f14.10,f14.10,f14.10,f14.10,f14.10,f14.10,f14.10)') y, averageM, averageC, minM, maxM, minC, maxC
-  enddo
-  write(12,*) 
+   open(UNIT = 12, FILE = "2D_output.dat", POSITION = "append", ACTION = "write")
+
+   filter = 1
+   if (row .gt. 257) then
+     filter = (row-1)/256
+   endif
+ 
+   do, i=1,row
+     if (MOD(i-1, filter) == 0) then
+       averageM = 0
+       averageC = 0
+       maxM = 0
+       maxC = 0
+       minM = 1
+       minC = 1
+       do, j=1,col
+           p = j + (i-1)*col
+           averageM = averageM + M(p)
+           averageC = averageC + C(p)
+           if(M(p) .ge. maxM) then 
+               maxM = M(p)
+           endif
+           if(M(p) .le. minM) then 
+               minM = M(p)
+           endif
+           if(C(p) .ge. maxC) then
+               maxC = C(p)
+           endif
+           if(C(p) .le. minC) then
+               minC = C(p)
+           endif
+       enddo
+       averageM = averageM/(col)
+       averageC = averageC/(col)
+       y = real(i-1)/real(row-1)
+       write(12,'(f20.12,f20.12,f20.12)') y,averageM,averageC
+!wrte(12,'(f14.10,f14.10,f14.10,f14.10,f14.10,f14.10,f14.10)') y, averageM, averageC, minM, maxM, minC, maxC
+     endif
+   enddo
+   write(12,*) 
       
       
 end subroutine printToFile2D

@@ -33,6 +33,7 @@ do
   set terminal post enhanced color eps
   set xr[0:1]
   set yr[0:1]
+  set zr[0.00001:1]
   set view map
   unset surf
   set pm3d
