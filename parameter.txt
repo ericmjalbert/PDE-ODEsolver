@@ -1,19 +1,19 @@
 !----------------------------------------------------------------------
 ! Parameters
 !----------------------------------------------------------------------
-pSize = 35 
+  pSize = 257 
   true2D    =   0             ! if 1 then prob is 2D, otherwise 3D  
-  depth     =   0.390625     ! depth of innoculation site
+  depth     =   0.0390625     ! depth of innoculation site
   height    =   0.10          ! height of innoculation site
   innocPts  =   4             ! number of innoculation points for IC
   alpha     =   4             ! exponent in D(M)
   beta      =   4             ! exponent in D(M)
   nu        =   0.3           ! Death rate 
   kappa     =   0.01          ! Non-dim Half-Sat point
-  gama      =   0.75          ! Non-dim Yield rate 
-  delta     =   0.00001   ! Non-dim Diffusion parameter
-  nOuts     =   5             ! Num. of solutions written to file
-  tEnd      =   3            ! The time at which computations stop
+  gama      =   0.65          ! Non-dim Yield rate 
+  delta     =   0.001   ! Non-dim Diffusion parameter
+  nOuts     =   10             ! Num. of solutions written to file
+  tEnd      =   20            ! The time at which computations stop
   tDel      =   0.02         ! Change in time
   xDel      =   1/real(row)   ! Change in x
   e1        =   1.0e-12       ! Error 1 tolerence (linear solver)
@@ -26,7 +26,7 @@ pSize = 35
   fSelect   = 1 
   dSelect   = 3
   gSelect   = 1
-  MinitialCond = 6
+  MinitialCond = 9
 
 =======================================================================
 =======================================================================
@@ -62,48 +62,24 @@ pSize = 35
 !  C = 1.
 ! 
 ! MinitialCond = 1:     (Non-homogenous Biomass [2D])
-!------------------------------
-! M = 0
-! j = 0
-! b = height
-! a = -b/(depth)**4
-! f = a*j*xDel + height
-! do while(f > 0)
-!   do i = 1,col!col/5,col/5*2
-!     M(i+j*col) = f
-!   enddo
-!   j = j+1
-!   f = a*(j*xDel)**4 + height
-! enddo
 !
 ! MinitialCond = 2:     (Homogenous Biomass)
-!------------------------------
-! M = height
 !
 ! MinitialCond = 3:     (Center Innoculation Point [3D])
-!------------------------------
-! M = 0
-! a = -height/(depth)**2
-! f = a*(j*xDel)**2 + height
-! jstop = INT(depth/xDel)+1
-! !#omp parallel do private(f,x,y) shared(height,a) 
-! do i = 1, n
-!   x = MOD(i, col)
-!   y = i / row
-!   f = a*xDel*xDel*(x*x + y*y) + height
-!   M(i) = f
-!   if (M(i) .LE. 0) M(i) = 0
-! enddo  
 !    
-! MinitialCond = 4:    (Random innoclation points over whole domain [3D])
+! MinitialCond = 4:     (Random innoclation points over whole domain [3D])
 !
-! MinitialCOnd = 5:    (Random innoculation points on y=0 side [3D])
+! MinitialCOnd = 5:     (Random innoculation points on y=0 side [3D])
 ! 
 ! MinitialCond = 6:
 !       ( homogenous biomass for x < h , sharp front)
 !
 ! MinitialCond = 7:
 !       ( pertubations in y-dir; check trav.wave. stability)
+!
+! MinitialCond = 8: (Test the grid ordering/ printing)
+!
+! MinitialCond = 9: (Evenly spaced innoculation points on y=0 side [3D])
 !----------------------------------------------------------------------
 
 

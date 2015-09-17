@@ -1,6 +1,5 @@
 !=============================================================================
 !   PDE - ODE Coupled Solver
-
 !-----------------------------------------------------------------------------
 !     This fortran code solves the PDE - ODE coupled system that describes 
 !   the growth of Clostridium Thermocellum and its consumption of the carbon
@@ -301,8 +300,9 @@ subroutine setInitialConditions(C,M,row,col,n,depth,height,xDel,MinitialCond, &
         enddo
         !$omp end parallel do
 
+    !(Random innoclation points over whole domain [3D])
     else if (MinitialCond == 4) then
-      a = -height/(depth*depth*num_innocu_points)
+      a = -height/(depth*depth)
       call init_random_seed()
       do i = 1, num_innocu_points
         call random_number(xr)
@@ -311,7 +311,7 @@ subroutine setInitialConditions(C,M,row,col,n,depth,height,xDel,MinitialCond, &
           if (M(j) .LE. 0) then
             x = MOD(j, col)
             y = j / row
-            M(j) = a*((x*xDel-xr)*(x*xDel-xr) + (y*xDel-yr)*(y*xDel-yr)) + height/num_innocu_points
+            M(j) = M(j) + a*((x*xDel-xr)*(x*xDel-xr) + (y*xDel-yr)*(y*xDel-yr)) + height
             if (M(j) .LE. 0) M(j) = 0
           endif
         enddo
@@ -319,17 +319,20 @@ subroutine setInitialConditions(C,M,row,col,n,depth,height,xDel,MinitialCond, &
         ! in here, maybe try adding a +- random number thing to give some difference to each innoculation points
         ! Makeing sure to add some sort of tally so that the total initial biomass is always a constant (pi/2*d^2*h)
       enddo 
-        
+
+    !(Random innoculation points on y=0 side [3D])
     else if (MinitialCond == 5) then
-      a = -height/(depth*depth*num_innocu_points)
+      a = -height/(depth*depth)
       call init_random_seed()
       do i = 1, num_innocu_points
         call random_number(xr)
+        call random_number(yr)
+        yr = yr*0.1
         do j = 1, n
           if (M(j) .LE. 0) then
             x = MOD(j, col)
             y = j / row
-            M(j) = a*((x*xDel-xr)*(x*xDel-xr) + (y*xDel)*(y*xDel)) + height/num_innocu_points
+            M(j) = M(j) + a*((x*xDel-xr)*(x*xDel-xr) + (y*xDel)*(y*xDel)) + height
             if (M(j) .LE. 0) M(j) = 0
           endif
         enddo
@@ -368,9 +371,22 @@ subroutine setInitialConditions(C,M,row,col,n,depth,height,xDel,MinitialCond, &
        M(i) = real(i)/real(n)/4.0
        if (M(i) .GE. 0.1) M(i) = 0
      enddo
-    endif
   
-
+    !(Evenly spaced innoculation points on y=0 side [3D])
+    else if (MinitialCond == 9) then
+      a = -height/(depth*depth)
+      do i = 1, num_innocu_points
+        xr = depth + (i-1)*2*depth + real((i-1)*(1-num_innocu_points*depth*2))/real(num_innocu_points-1) 
+        do j = 1, n
+          if (M(j) .LE. 0) then
+            x = MOD(j, col)
+            y = j / row
+            M(j) = M(j) + a*((x*xDel-xr)*(x*xDel-xr) + (y*xDel)*(y*xDel)) + height
+            if (M(j) .LE. 0) M(j) = 0
+          endif
+        enddo
+      enddo
+    endif
 end subroutine setInitialConditions
 
 
