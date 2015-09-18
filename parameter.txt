@@ -8,13 +8,13 @@
   innocPts  =   4             ! number of innoculation points for IC
   alpha     =   4             ! exponent in D(M)
   beta      =   4             ! exponent in D(M)
-  nu        =   0.3           ! Death rate 
+  nu        =   0.2           ! Death rate 
   kappa     =   0.01          ! Non-dim Half-Sat point
-  gama      =   0.65          ! Non-dim Yield rate 
-  delta     =   0.001   ! Non-dim Diffusion parameter
-  nOuts     =   10             ! Num. of solutions written to file
-  tEnd      =   20            ! The time at which computations stop
-  tDel      =   0.02         ! Change in time
+  gama      =   0.60          ! Non-dim Yield rate 
+  delta     =   0.0000001   ! Non-dim Diffusion parameter
+  nOuts     =   10            ! Num. of solutions written to file
+  tEnd      =   30            ! The time at which computations stop
+  tDel      =   0.002         ! Change in time
   xDel      =   1/real(row)   ! Change in x
   e1        =   1.0e-12       ! Error 1 tolerence (linear solver)
   e2        =   1.0e-12       ! Error 2 tolerence (linear solver)
@@ -23,10 +23,10 @@
 !----------------------------------------------------------------------
 !   Function Selections
 !----------------------------------------------------------------------
-  fSelect   = 1 
+  fSelect   = 3 
   dSelect   = 3
   gSelect   = 1
-  MinitialCond = 9
+  MinitialCond = 3
 
 =======================================================================
 =======================================================================
