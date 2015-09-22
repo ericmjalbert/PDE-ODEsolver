@@ -122,6 +122,7 @@ program cThermoPDEODE
     write(*,*) "    tDel        = ", tDel
     write(*,*) "    e1          = ", e1
     write(*,*) "    e2          = ", e2
+    write(*,*) "    eSoln       = ", eSoln
     write(*,*) "    nit         = ", nit
     write(*,*) "    xDel        = ", xDel
     write(*,*) "    fSelect     = ", fSelect
