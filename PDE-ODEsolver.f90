@@ -680,8 +680,8 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,xDel,&
         M = Mnew
         countIters = countIters+1
 
-        if (countIters > 1000) then
-          write(*,*) "[!] Over 100 iterations in one timestep"
+        if (countIters > 10000) then
+          write(*,*) "[!] Over 10000 iterations in one timestep"
           write(*,*) "[!] Solutions not converging. Exit!"
           stop
         end if
