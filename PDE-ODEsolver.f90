@@ -400,12 +400,13 @@ subroutine fFunc(M,C,f,kappa,nu,fSelect)
     real, intent(in) :: M,C,kappa,nu
     real, intent(out) :: f
     real :: eps
-    eps = 0.0000000001
+    eps = C*0.00000001
     if (fSelect == 1) f = C/(kappa+C)-nu 
     if (fSelect == 2) f = C/(kappa+C)
     if (fSelect == 3) f = C/(kappa*M+C+eps)-nu
     if (fSelect == 4) f = C/(kappa*M+C+eps)
     if (fSelect == 5) f = 1
+    if (fSelect == 6) f = C/(kappa+C)*(1-M/(C+eps))-nu
 end subroutine fFunc
 
 

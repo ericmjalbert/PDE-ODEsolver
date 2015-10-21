@@ -1,29 +1,29 @@
 !----------------------------------------------------------------------
 ! Parameters
 !----------------------------------------------------------------------
-pSize     = 65 
-true2D    = 0             ! if 1 then prob is 2D, otherwise 3D  
+pSize     = 513 
+true2D    = 1             ! if 1 then prob is 2D, otherwise 3D  
 depth     = 0.0390625     ! depth of innoculation site
 height    = 0.10          ! height of innoculation site
 innocPts  = 4             ! number of innoculation points for IC
 alpha     = 4             ! exponent in D(M)
 beta      = 4             ! exponent in D(M)
-nu        = 0.3
-kappa     = 0.01
-gama      = 0.50
-delta     = 0.0000001
+nu        = 0.05
+kappa     = 0.001
+gama      = 0.26
+delta     = 0.001
 nOuts     = 20
-tEnd      = 40
+tEnd      = 20
 tDel      = 0.001         ! Change in time
 xDel      = 1/real(row)   ! Change in x
-e1        = 1.0e-10       ! Error 1 tolerence (linear solver)
-e2        = 1.0e-10       ! Error 2 tolerence (linear solver)
-eSoln     = 1.0e-12    ! 1.0e-12       ! Error between soln in single timestep
+e1        = 1.0e-8       ! Error 1 tolerence (linear solver)
+e2        = 1.0e-8       ! Error 2 tolerence (linear solver)
+eSoln     = 1.0e-8      ! Error between soln in single timestep
 nit       = n*100         ! Max number of iterations (lin. sol.)
 !----------------------------------------------------------------------
 !   Function Selections
 !----------------------------------------------------------------------
-fSelect   = 1 
+fSelect   = 6 
 dSelect   = 3
 gSelect   = 1
 MinitialCond = 1
@@ -39,6 +39,7 @@ MinitialCond = 1
 !   (fSelect == 3) f = C/(k*M+C+eps)-nu
 !   (fSelect == 4) f = C/(k*M+C+eps)
 !   (fSelect == 5) f = 1
+!   (fSelect == 6) f = C/(k+C)*(1-M/C)-nu
 !----------------------------------------------------------------------
   
 !----------------------------------------------------------------------
