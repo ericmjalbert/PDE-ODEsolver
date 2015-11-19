@@ -15,7 +15,7 @@ mv peakInfo.dat $DIRNAME/
 mv total.dat $DIRNAME/
 mv statReport.dat $DIRNAME/
 cp $1 $DIRNAME/
-mv 2D_output.dat ./$DIRNAME/out.dat
+mv 2D_output.dat ./$DIRNAME/all_out.dat
 mv COprod.dat ./$DIRNAME/
 
 # Counts files, lines, and words from input (the pipe "|")

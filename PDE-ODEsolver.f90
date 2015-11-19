@@ -268,6 +268,9 @@ subroutine setInitialConditions(C,M,row,col,n,depth,height,xDel,MinitialCond, &
 
     integer :: i,j,x,y, xi, yi, p
     real :: f,a       ! function for IC curve
+    real :: innoc     ! Placeholder for new IC value at point
+    real :: total     ! Counts total innoculation height
+    real :: mIC, cIC      ! Used to store previous simulation values while reading
     real :: xr, yr
     
     C = 1.; j = 0; M = 0
@@ -330,14 +333,24 @@ subroutine setInitialConditions(C,M,row,col,n,depth,height,xDel,MinitialCond, &
         call random_number(yr)
         yr = yr*0.1
         do j = 1, n
-          if (M(j) .LE. 0) then
             x = MOD(j, col)
             y = j / row
-            M(j) = M(j) + a*((x*xDel-xr)*(x*xDel-xr) + (y*xDel)*(y*xDel)) + height
-            if (M(j) .LE. 0) M(j) = 0
-          endif
+            innoc = a*((x*xDel-xr)*(x*xDel-xr) + (y*xDel-yr)*(y*xDel-yr)) + height
+            if (innoc .GE. 0) M(j) = M(j) + innoc 
         enddo
       enddo
+        ! Divide innoculation height by average non-zero value
+      i = 0
+      do j = 1, n
+        if (M(j) .GT. 0) then
+          i = i + 1
+          total = total + M(j)
+        endif
+      enddo
+      do j = 1, n
+        M(j) = M(j) * height/(total/real(i))
+      enddo
+
 
     ! sharp IC. homogenous in y-dir
     else if (MinitialCond == 6) then
@@ -387,7 +400,42 @@ subroutine setInitialConditions(C,M,row,col,n,depth,height,xDel,MinitialCond, &
           endif
         enddo
       enddo
+
+    ! Random innoculation points on y=0 and y = 1
+    else if (MinitialCond == 10) then
+      a = -height/(depth*depth)
+      call init_random_seed()
+      do i = 1, 2*num_innocu_points
+        call random_number(xr)
+        call random_number(yr)
+        yr = yr*0.1
+        if (i .GT. num_innocu_points) then 
+          yr = yr + 0.9 ! For y = 1 side
+        endif
+        do j = 1, n
+            x = MOD(j, col)
+            y = j / row
+            innoc = a*((x*xDel-xr)*(x*xDel-xr) + (y*xDel-yr)*(y*xDel-yr)) + height
+            if (innoc .GE. 0) M(j) = M(j) + innoc 
+        enddo
+      enddo
+
+    ! Read IC from output file... (Continues a previous sim) CANNOT GET WORKING>>>>
+!    else if (MinitialCond == 11) then
+!      open(UNIT = 119, FILE = "initialCond.dat", STATUS = "old", ACTION = "read")
+!      read(119,*) ! Skip first line
+!      do i = 1, n/2+1
+!        read(119,*) innoc, innoc, innoc, innoc
+!      enddo
+!      do i = n/2+1, n      <<<<< THIS IS THE PROBLEM AREA, Can't divide the region in two
+!        read(119,*) innoc, innoc, mIC, cIC ! innoc is used as a dummy variable here
+!        M(i) = mIC 
+!        C(i) = cIC 
+!      enddo
+!      close(119)
+!
     endif
+
 end subroutine setInitialConditions
 
 
@@ -587,7 +635,7 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,xDel,&
   stored_e1 = e1
   stored_e2 = e2 
  
-  filter = int(tEnd/(nOuts*tDel)) +1
+  filter = int(tEnd/(nOuts*tDel))
   endLoop = 0
   counter = 0
   countIters = 0
@@ -696,15 +744,15 @@ subroutine solveOrder2(tEnd,nOuts,tDel,n,row,col,M,C,xDel,&
   avgNit = avgNit/(avgIters) ! avgIters right now is the total
   avgIters = avgIters/counter
 
-  ! Print final solution
-  if (true2D == 1) then
-    call printToFile2D(n,row,col,M,C)
-  else
-    call printToFile(n,row,col,M,C)
-  end if
-  write(*,'(F8.2,F12.2,I8,F12.2,I8,F12.6,F12.6)') tDel*counter, &
-          real(avgIters), int(maxIters), real(avgNit), &
-          int(maxNit),totalMassM, totalMassC
+!  ! Print final solution
+!  if (true2D == 1) then
+!    call printToFile2D(n,row,col,M,C)
+!  else
+!    call printToFile(n,row,col,M,C)
+!  end if
+!  write(*,'(F8.2,F12.2,I8,F12.2,I8,F12.6,F12.6)') tDel*counter, &
+!          real(avgIters), int(maxIters), real(avgNit), &
+!          int(maxNit),totalMassM, totalMassC
 
   close(120)
   close(126)
